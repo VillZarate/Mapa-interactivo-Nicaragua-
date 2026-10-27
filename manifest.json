@@ -1,0 +1,33 @@
+{
+  "name": "Nicaragua · Mi mapa de viajes",
+  "short_name": "Mapa NI",
+  "description": "Mapa interactivo de Nicaragua para marcar los lugares que ya visitaste y los que quieres visitar.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2f1",
+  "theme_color": "#0b6e7f",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "utilities"]
+}
