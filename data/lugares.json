@@ -1,0 +1,1163 @@
+[
+  {
+    "id": "dep-boaco",
+    "nombre": "Boaco",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.47,
+      -85.66
+    ]
+  },
+  {
+    "id": "dep-carazo",
+    "nombre": "Carazo",
+    "tipo": "departamento",
+    "coordenadas": [
+      11.85,
+      -86.2
+    ]
+  },
+  {
+    "id": "dep-chinandega",
+    "nombre": "Chinandega",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.63,
+      -87.13
+    ]
+  },
+  {
+    "id": "dep-chontales",
+    "nombre": "Chontales",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.11,
+      -85.37
+    ]
+  },
+  {
+    "id": "dep-esteli",
+    "nombre": "Estelí",
+    "tipo": "departamento",
+    "coordenadas": [
+      13.09,
+      -86.35
+    ]
+  },
+  {
+    "id": "dep-granada",
+    "nombre": "Granada",
+    "tipo": "departamento",
+    "coordenadas": [
+      11.93,
+      -85.96
+    ]
+  },
+  {
+    "id": "dep-jinotega",
+    "nombre": "Jinotega",
+    "tipo": "departamento",
+    "coordenadas": [
+      13.09,
+      -86.0
+    ]
+  },
+  {
+    "id": "dep-leon",
+    "nombre": "León",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.44,
+      -86.88
+    ]
+  },
+  {
+    "id": "dep-madriz",
+    "nombre": "Madriz",
+    "tipo": "departamento",
+    "coordenadas": [
+      13.48,
+      -86.58
+    ]
+  },
+  {
+    "id": "dep-managua",
+    "nombre": "Managua",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.14,
+      -86.25
+    ]
+  },
+  {
+    "id": "dep-masaya",
+    "nombre": "Masaya",
+    "tipo": "departamento",
+    "coordenadas": [
+      11.97,
+      -86.09
+    ]
+  },
+  {
+    "id": "dep-matagalpa",
+    "nombre": "Matagalpa",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.93,
+      -85.92
+    ]
+  },
+  {
+    "id": "dep-nueva-segovia",
+    "nombre": "Nueva Segovia",
+    "tipo": "departamento",
+    "coordenadas": [
+      13.63,
+      -86.48
+    ]
+  },
+  {
+    "id": "dep-rio-san-juan",
+    "nombre": "Río San Juan",
+    "tipo": "departamento",
+    "coordenadas": [
+      11.12,
+      -84.78
+    ]
+  },
+  {
+    "id": "dep-rivas",
+    "nombre": "Rivas",
+    "tipo": "departamento",
+    "coordenadas": [
+      11.44,
+      -85.83
+    ]
+  },
+  {
+    "id": "reg-raccn",
+    "nombre": "RACCN",
+    "tipo": "departamento",
+    "coordenadas": [
+      14.03,
+      -83.39
+    ]
+  },
+  {
+    "id": "reg-raccs",
+    "nombre": "RACCS",
+    "tipo": "departamento",
+    "coordenadas": [
+      12.01,
+      -83.76
+    ]
+  },
+  {
+    "id": "ciudad-managua",
+    "nombre": "Managua",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.1364,
+      -86.2514
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-ciudad-sandino",
+    "nombre": "Ciudad Sandino",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.159,
+      -86.344
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-tipitapa",
+    "nombre": "Tipitapa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.197,
+      -86.097
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-mateare",
+    "nombre": "Mateare",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.235,
+      -86.431
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-san-rafael-del-sur",
+    "nombre": "San Rafael del Sur",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.848,
+      -86.438
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-ticuantepe",
+    "nombre": "Ticuantepe",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.023,
+      -86.204
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-el-crucero",
+    "nombre": "El Crucero",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.99,
+      -86.31
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-villa-el-carmen",
+    "nombre": "Villa El Carmen",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.98,
+      -86.51
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "ciudad-leon",
+    "nombre": "León",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.4353,
+      -86.878
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-nagarote",
+    "nombre": "Nagarote",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.266,
+      -86.565
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-la-paz-centro",
+    "nombre": "La Paz Centro",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.34,
+      -86.675
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-telica",
+    "nombre": "Telica",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.522,
+      -86.859
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-quezalguaque",
+    "nombre": "Quezalguaque",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.507,
+      -86.903
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-el-sauce",
+    "nombre": "El Sauce",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.887,
+      -86.539
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-achuapa",
+    "nombre": "Achuapa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.053,
+      -86.59
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-larreynaga",
+    "nombre": "Larreynaga",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.677,
+      -86.57
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-el-jicaral",
+    "nombre": "El Jicaral",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.727,
+      -86.38
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "ciudad-chinandega",
+    "nombre": "Chinandega",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.6294,
+      -87.1311
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-el-viejo",
+    "nombre": "El Viejo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.663,
+      -87.167
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-chichigalpa",
+    "nombre": "Chichigalpa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.578,
+      -87.027
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-corinto",
+    "nombre": "Corinto",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.481,
+      -87.173
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-somotillo",
+    "nombre": "Somotillo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.043,
+      -86.905
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-posoltega",
+    "nombre": "Posoltega",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.545,
+      -86.98
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-el-realejo",
+    "nombre": "El Realejo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.543,
+      -87.165
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-villanueva",
+    "nombre": "Villanueva",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.933,
+      -86.817
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "ciudad-granada",
+    "nombre": "Granada",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.9297,
+      -85.956
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "ciudad-nandaime",
+    "nombre": "Nandaime",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.757,
+      -86.053
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "ciudad-diriomo",
+    "nombre": "Diriomo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.877,
+      -86.052
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "ciudad-diria",
+    "nombre": "Diriá",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.885,
+      -86.055
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "ciudad-masaya",
+    "nombre": "Masaya",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.9744,
+      -86.0942
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-nindiri",
+    "nombre": "Nindirí",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.004,
+      -86.121
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-masatepe",
+    "nombre": "Masatepe",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.915,
+      -86.145
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-catarina",
+    "nombre": "Catarina",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.912,
+      -86.073
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-san-juan-de-oriente",
+    "nombre": "San Juan de Oriente",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.905,
+      -86.073
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-la-concepcion",
+    "nombre": "La Concepción",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.937,
+      -86.19
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-tisma",
+    "nombre": "Tisma",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.082,
+      -86.017
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "ciudad-jinotepe",
+    "nombre": "Jinotepe",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.85,
+      -86.2
+    ],
+    "departamento": "Carazo"
+  },
+  {
+    "id": "ciudad-diriamba",
+    "nombre": "Diriamba",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.858,
+      -86.239
+    ],
+    "departamento": "Carazo"
+  },
+  {
+    "id": "ciudad-san-marcos",
+    "nombre": "San Marcos",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.909,
+      -86.204
+    ],
+    "departamento": "Carazo"
+  },
+  {
+    "id": "ciudad-santa-teresa",
+    "nombre": "Santa Teresa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.783,
+      -86.217
+    ],
+    "departamento": "Carazo"
+  },
+  {
+    "id": "ciudad-dolores",
+    "nombre": "Dolores",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.857,
+      -86.215
+    ],
+    "departamento": "Carazo"
+  },
+  {
+    "id": "ciudad-rivas",
+    "nombre": "Rivas",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.4372,
+      -85.8263
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-san-juan-del-sur",
+    "nombre": "San Juan del Sur",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.2529,
+      -85.8701
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-altagracia",
+    "nombre": "Altagracia",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.566,
+      -85.578
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-moyogalpa",
+    "nombre": "Moyogalpa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.54,
+      -85.698
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-belen",
+    "nombre": "Belén",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.583,
+      -85.9
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-cardenas",
+    "nombre": "Cárdenas",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.197,
+      -85.509
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-tola",
+    "nombre": "Tola",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.439,
+      -85.939
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "ciudad-esteli",
+    "nombre": "Estelí",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.0917,
+      -86.3547
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-condega",
+    "nombre": "Condega",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.365,
+      -86.398
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-pueblo-nuevo",
+    "nombre": "Pueblo Nuevo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.38,
+      -86.481
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-la-trinidad",
+    "nombre": "La Trinidad",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.979,
+      -86.235
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-san-juan-de-limay",
+    "nombre": "San Juan de Limay",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.176,
+      -86.575
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-san-nicolas",
+    "nombre": "San Nicolás",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.93,
+      -86.34
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "ciudad-matagalpa",
+    "nombre": "Matagalpa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.9255,
+      -85.9175
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-sebaco",
+    "nombre": "Sébaco",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.852,
+      -86.096
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-ciudad-dario",
+    "nombre": "Ciudad Darío",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.731,
+      -86.124
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-san-ramon",
+    "nombre": "San Ramón",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.923,
+      -85.839
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-rio-blanco",
+    "nombre": "Río Blanco",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.934,
+      -85.224
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-esquipulas",
+    "nombre": "Esquipulas",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.666,
+      -85.783
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-matiguas",
+    "nombre": "Matiguás",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.837,
+      -85.462
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-muy-muy",
+    "nombre": "Muy Muy",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.762,
+      -85.629
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-terrabona",
+    "nombre": "Terrabona",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.73,
+      -85.965
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "ciudad-jinotega",
+    "nombre": "Jinotega",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.091,
+      -86.0023
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-san-rafael-del-norte",
+    "nombre": "San Rafael del Norte",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.212,
+      -86.11
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-la-concordia",
+    "nombre": "La Concordia",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.193,
+      -86.167
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-san-sebastian-de-yali",
+    "nombre": "San Sebastián de Yalí",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.305,
+      -86.186
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-el-cua",
+    "nombre": "El Cuá",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.375,
+      -85.673
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-wiwili",
+    "nombre": "Wiwilí",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.62,
+      -85.825
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "ciudad-ocotal",
+    "nombre": "Ocotal",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.633,
+      -86.476
+    ],
+    "departamento": "Nueva Segovia"
+  },
+  {
+    "id": "ciudad-jalapa",
+    "nombre": "Jalapa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.923,
+      -86.126
+    ],
+    "departamento": "Nueva Segovia"
+  },
+  {
+    "id": "ciudad-somoto",
+    "nombre": "Somoto",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.484,
+      -86.583
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-totogalpa",
+    "nombre": "Totogalpa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.563,
+      -86.493
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-palacaguina",
+    "nombre": "Palacagüina",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.455,
+      -86.407
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-yalaguina",
+    "nombre": "Yalagüina",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.483,
+      -86.45
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-san-lucas",
+    "nombre": "San Lucas",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.415,
+      -86.6
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-las-sabanas",
+    "nombre": "Las Sabanas",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.343,
+      -86.622
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "ciudad-boaco",
+    "nombre": "Boaco",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.472,
+      -85.66
+    ],
+    "departamento": "Boaco"
+  },
+  {
+    "id": "ciudad-camoapa",
+    "nombre": "Camoapa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.384,
+      -85.512
+    ],
+    "departamento": "Boaco"
+  },
+  {
+    "id": "ciudad-teustepe",
+    "nombre": "Teustepe",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.42,
+      -85.8
+    ],
+    "departamento": "Boaco"
+  },
+  {
+    "id": "ciudad-san-lorenzo",
+    "nombre": "San Lorenzo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.378,
+      -85.667
+    ],
+    "departamento": "Boaco"
+  },
+  {
+    "id": "ciudad-juigalpa",
+    "nombre": "Juigalpa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.106,
+      -85.365
+    ],
+    "departamento": "Chontales"
+  },
+  {
+    "id": "ciudad-acoyapa",
+    "nombre": "Acoyapa",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.97,
+      -85.171
+    ],
+    "departamento": "Chontales"
+  },
+  {
+    "id": "ciudad-santo-tomas",
+    "nombre": "Santo Tomás",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.07,
+      -85.09
+    ],
+    "departamento": "Chontales"
+  },
+  {
+    "id": "ciudad-villa-sandino",
+    "nombre": "Villa Sandino",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.05,
+      -84.99
+    ],
+    "departamento": "Chontales"
+  },
+  {
+    "id": "ciudad-santo-domingo",
+    "nombre": "Santo Domingo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.26,
+      -85.08
+    ],
+    "departamento": "Chontales"
+  },
+  {
+    "id": "ciudad-san-carlos",
+    "nombre": "San Carlos",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.123,
+      -84.778
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "ciudad-el-castillo",
+    "nombre": "El Castillo",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.019,
+      -84.401
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "ciudad-san-miguelito",
+    "nombre": "San Miguelito",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.403,
+      -84.9
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "ciudad-el-almendro",
+    "nombre": "El Almendro",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.68,
+      -84.7
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "ciudad-morrito",
+    "nombre": "Morrito",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.621,
+      -85.081
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "ciudad-bluefields",
+    "nombre": "Bluefields",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.013,
+      -83.764
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "ciudad-el-rama",
+    "nombre": "El Rama",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.16,
+      -84.22
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "ciudad-nueva-guinea",
+    "nombre": "Nueva Guinea",
+    "tipo": "ciudad",
+    "coordenadas": [
+      11.688,
+      -84.456
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "ciudad-corn-island",
+    "nombre": "Corn Island",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.169,
+      -83.042
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "ciudad-little-corn",
+    "nombre": "Little Corn Island",
+    "tipo": "ciudad",
+    "coordenadas": [
+      12.293,
+      -82.985
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "ciudad-puerto-cabezas",
+    "nombre": "Puerto Cabezas (Bilwi)",
+    "tipo": "ciudad",
+    "coordenadas": [
+      14.035,
+      -83.389
+    ],
+    "departamento": "RACCN"
+  },
+  {
+    "id": "ciudad-siuna",
+    "nombre": "Siuna",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.734,
+      -84.777
+    ],
+    "departamento": "RACCN"
+  },
+  {
+    "id": "ciudad-bonanza",
+    "nombre": "Bonanza",
+    "tipo": "ciudad",
+    "coordenadas": [
+      14.029,
+      -84.591
+    ],
+    "departamento": "RACCN"
+  },
+  {
+    "id": "ciudad-rosita",
+    "nombre": "Rosita",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.897,
+      -84.403
+    ],
+    "departamento": "RACCN"
+  },
+  {
+    "id": "ciudad-waspan",
+    "nombre": "Waspán",
+    "tipo": "ciudad",
+    "coordenadas": [
+      14.742,
+      -83.972
+    ],
+    "depar
