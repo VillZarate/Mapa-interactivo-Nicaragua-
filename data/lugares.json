@@ -1160,4 +1160,426 @@
       14.742,
       -83.972
     ],
-    "depar
+    "departamento": "RACCN"
+  },
+  {
+    "id": "ciudad-waslala",
+    "nombre": "Waslala",
+    "tipo": "ciudad",
+    "coordenadas": [
+      13.233,
+      -85.383
+    ],
+    "departamento": "RACCN"
+  },
+  {
+    "id": "lugar-laguna-apoyo",
+    "nombre": "Laguna de Apoyo",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.922,
+      -86.033
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "lugar-volcan-masaya",
+    "nombre": "Volcán Masaya",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.984,
+      -86.161
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "lugar-volcan-mombacho",
+    "nombre": "Volcán Mombacho",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.826,
+      -85.968
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "lugar-isletas-granada",
+    "nombre": "Isletas de Granada",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.9,
+      -85.91
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "lugar-ometepe",
+    "nombre": "Isla de Ometepe",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.5,
+      -85.6
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-volcan-concepcion",
+    "nombre": "Volcán Concepción",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.538,
+      -85.622
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-volcan-maderas",
+    "nombre": "Volcán Maderas",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.446,
+      -85.515
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-charco-verde",
+    "nombre": "Charco Verde",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.479,
+      -85.635
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-playa-maderas",
+    "nombre": "Playa Maderas",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.273,
+      -85.917
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-playa-marsella",
+    "nombre": "Playa Marsella",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.29,
+      -85.9
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-cerro-negro",
+    "nombre": "Volcán Cerro Negro",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.506,
+      -86.702
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "lugar-volcan-telica",
+    "nombre": "Volcán Telica",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.602,
+      -86.845
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "lugar-volcan-san-cristobal",
+    "nombre": "Volcán San Cristóbal",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.702,
+      -87.004
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "lugar-poneloya",
+    "nombre": "Playa Poneloya",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.37,
+      -87.04
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "lugar-penitas",
+    "nombre": "Playa Las Peñitas",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.36,
+      -87.05
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "lugar-juan-venado",
+    "nombre": "Reserva Juan Venado",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.34,
+      -87.05
+    ],
+    "departamento": "León"
+  },
+  {
+    "id": "lugar-canyon-somoto",
+    "nombre": "Cañón de Somoto",
+    "tipo": "lugar",
+    "coordenadas": [
+      13.45,
+      -86.7
+    ],
+    "departamento": "Madriz"
+  },
+  {
+    "id": "lugar-mirador-de-catarina",
+    "nombre": "Mirador de Catarina",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.912,
+      -86.073
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "lugar-pueblos-blancos",
+    "nombre": "Pueblos Blancos",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.91,
+      -86.08
+    ],
+    "departamento": "Masaya"
+  },
+  {
+    "id": "lugar-solentiname",
+    "nombre": "Archipiélago de Solentiname",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.18,
+      -84.98
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "lugar-indios-maiz",
+    "nombre": "Reserva Indio Maíz",
+    "tipo": "lugar",
+    "coordenadas": [
+      10.95,
+      -84.1
+    ],
+    "departamento": "Río San Juan"
+  },
+  {
+    "id": "lugar-pearl-cay",
+    "nombre": "Pearl Cays",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.3,
+      -83.4
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "lugar-laguna-de-perlas",
+    "nombre": "Laguna de Perlas",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.34,
+      -83.67
+    ],
+    "departamento": "RACCS"
+  },
+  {
+    "id": "lugar-miraflor",
+    "nombre": "Reserva Miraflor",
+    "tipo": "lugar",
+    "coordenadas": [
+      13.2,
+      -86.2
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "lugar-tisey",
+    "nombre": "Reserva Tisey-Estanzuela",
+    "tipo": "lugar",
+    "coordenadas": [
+      13.0,
+      -86.4
+    ],
+    "departamento": "Estelí"
+  },
+  {
+    "id": "lugar-selva-negra",
+    "nombre": "Selva Negra",
+    "tipo": "lugar",
+    "coordenadas": [
+      13.0,
+      -85.91
+    ],
+    "departamento": "Matagalpa"
+  },
+  {
+    "id": "lugar-penas-blancas",
+    "nombre": "Reserva Peñas Blancas",
+    "tipo": "lugar",
+    "coordenadas": [
+      13.2,
+      -85.7
+    ],
+    "departamento": "Jinotega"
+  },
+  {
+    "id": "lugar-montibelli",
+    "nombre": "Reserva Montibelli",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.02,
+      -86.22
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "lugar-chocoyero",
+    "nombre": "Reserva El Chocoyero",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.94,
+      -86.18
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "lugar-xiloa",
+    "nombre": "Laguna de Xiloá",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.22,
+      -86.32
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "lugar-nejapa",
+    "nombre": "Laguna de Nejapa",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.11,
+      -86.32
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "lugar-asososca",
+    "nombre": "Laguna de Asososca",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.14,
+      -86.32
+    ],
+    "departamento": "Managua"
+  },
+  {
+    "id": "lugar-zapatera",
+    "nombre": "Isla Zapatera",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.73,
+      -85.85
+    ],
+    "departamento": "Granada"
+  },
+  {
+    "id": "lugar-cosiguina",
+    "nombre": "Volcán Cosigüina",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.98,
+      -87.57
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "lugar-padre-ramos",
+    "nombre": "Estero Padre Ramos",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.8,
+      -87.45
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "lugar-mechapa",
+    "nombre": "Playa Mechapa",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.85,
+      -87.55
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "lugar-jiquilillo",
+    "nombre": "Playa Jiquilillo",
+    "tipo": "lugar",
+    "coordenadas": [
+      12.75,
+      -87.45
+    ],
+    "departamento": "Chinandega"
+  },
+  {
+    "id": "lugar-popoyo",
+    "nombre": "Playa Popoyo",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.48,
+      -86.0
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-hermosa",
+    "nombre": "Playa Hermosa",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.45,
+      -86.0
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-santo-domingo-ometepe",
+    "nombre": "Playa Santo Domingo (Ometepe)",
+    "tipo": "lugar",
+    "coordenadas": [
+      11.49,
+      -85.56
+    ],
+    "departamento": "Rivas"
+  },
+  {
+    "id": "lugar-san-juan-del-norte",
+    "nombre": "San Juan de Nicaragua (Greytown)",
+    "tipo": "lugar",
+    "coordenadas": [
+      10.92,
+      -83.7
+    ],
+    "departamento": "Río San Juan"
+  }
+]
