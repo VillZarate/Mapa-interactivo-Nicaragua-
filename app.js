@@ -10,6 +10,7 @@
   /* ---------- Configuración ---------- */
 
   const STORAGE_KEY = 'mapa-nicaragua:v1';
+  const LOCAL_UID_KEY = 'mapa-nicaragua:uid';
   const DATA_URL = 'data/lugares.json';
   const CENTRO = [12.87, -85.2];
   const ZOOM_INICIAL = 7;
@@ -26,7 +27,11 @@
 
   let db = null;
   let syncListo = false;
-  let escribiendoNube = false;
+  /** ids que estamos escribiendo nosotros (evita eco del onSnapshot) */
+  const escribiendoIds = new Set();
+  /** autores ocultos del filtro (colección ocultos) */
+  let autoresOcultos = new Set();
+  let miUid = '';
 
   try {
     if (typeof firebase !== 'undefined') {
@@ -35,6 +40,19 @@
     }
   } catch (err) {
     console.warn('Firebase no se pudo iniciar:', err);
+  }
+
+  function obtenerUidLocal() {
+    try {
+      let u = localStorage.getItem(LOCAL_UID_KEY);
+      if (!u) {
+        u = 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem(LOCAL_UID_KEY, u);
+      }
+      return u;
+    } catch (_) {
+      return 'local-temp';
+    }
   }
 
   // Único lugar donde se definen los estados y sus colores.
@@ -140,8 +158,11 @@
     });
     custom.forEach((c) => {
       if (c.autor) set.add(c.autor);
+      if (c.autorNombre) set.add(c.autorNombre);
     });
-    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+    return [...set]
+      .filter((a) => a && !autoresOcultos.has(a))
+      .sort((a, b) => a.localeCompare(b, 'es'));
   }
 
   function colorAutor(nombre) {
@@ -155,7 +176,12 @@
   const esPorVisitar = (estado) => estado === 'quiero' || estado === 'planeado';
   const tieneFecha = (i) => i.estado === 'planeado' || (!esVisitado(i.estado) && !!i.fechaPrevista);
 
-  /* ---------- Almacenamiento (local + nube compartida) ---------- */
+  /* ---------- Almacenamiento (localStorage caché + Firestore por documento) ----------
+     lugares/{id}   → solo pines manuales
+     registros/{id} → estado/fechas/notas de cualquier lugar (base o manual)
+     ocultos/{id}   → nombres de autor ocultos del filtro
+     admins/{uid}   → solo se crea a mano en la consola (no se escribe desde la app)
+  ---------- */
 
   function cargarStorage() {
     try {
@@ -169,85 +195,253 @@
     }
   }
 
-  function guardarStorage() {
+  function guardarCacheLocal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, custom }));
     } catch (err) {
       console.warn(err);
-      toast('No se pudo guardar en este navegador');
     }
-    // También guardar en la nube para compartir
-    guardarEnNube();
   }
 
-  function guardarEnNube() {
-    if (!db || !syncListo || escribiendoNube) return;
-    escribiendoNube = true;
-    db.collection('mapa').doc('compartido').set({
-      datos,
-      custom,
+  /** Compatibilidad: antes guardaba todo el mapa; ahora solo refresca la caché local.
+      Las escrituras a Firestore van por documento (ver guardarRegistro / guardarLugarManual). */
+  function guardarStorage() {
+    guardarCacheLocal();
+  }
+
+  function marcarEscritura(id) {
+    escribiendoIds.add(id);
+    setTimeout(() => escribiendoIds.delete(id), 1500);
+  }
+
+  function registroDesdeDoc(id, d) {
+    if (!d) return null;
+    return {
+      estado: ESTADOS[d.estado] ? d.estado : 'sin_marcar',
+      fechaVisita: d.fechaVisita || '',
+      fechaPrevista: d.fechaPrevista || '',
+      notas: d.notas || '',
+      autor: d.autorNombre || d.autor || '',
+      actualizadoPor: d.actualizadoPor || d.autorNombre || '',
+    };
+  }
+
+  function lugarDesdeDoc(id, d) {
+    if (!d || !Array.isArray(d.coordenadas) || d.coordenadas.length !== 2) return null;
+    const lugar = {
+      id,
+      nombre: d.nombre || 'Sin nombre',
+      tipo: d.tipo === 'lugar' ? 'lugar' : 'ciudad',
+      coordenadas: [Number(d.coordenadas[0]), Number(d.coordenadas[1])],
+      personalizado: true,
+      autor: d.autorNombre || d.autor || '',
+      autorUid: d.autorUid || '',
+    };
+    if (d.departamento) lugar.departamento = d.departamento;
+    return lugarValido(lugar) ? lugar : null;
+  }
+
+  /** Crea o actualiza registros/{id} (un documento por lugar). */
+  function guardarRegistroEnNube(id, registro) {
+    if (!db || !syncListo || !id) return;
+    marcarEscritura(id);
+    const payload = {
+      estado: registro.estado || 'sin_marcar',
+      fechaVisita: registro.fechaVisita || '',
+      fechaPrevista: registro.fechaPrevista || '',
+      notas: registro.notas || '',
+      autorUid: miUid || '',
+      autorNombre: registro.autor || miNombre || 'Anónimo',
+      actualizadoPor: registro.actualizadoPor || miNombre || 'Anónimo',
       actualizado: firebase.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true })
-      .then(() => { escribiendoNube = false; })
-      .catch((err) => {
-        escribiendoNube = false;
-        console.warn('No se pudo guardar en la nube:', err);
+    };
+    db.collection('registros').doc(id).set(payload, { merge: true })
+      .catch((err) => console.warn('Error guardando registro', id, err));
+  }
+
+  /** Crea o actualiza lugares/{id} (solo pines manuales). */
+  function guardarLugarManualEnNube(lugar) {
+    if (!db || !syncListo || !lugar || !lugar.id) return;
+    marcarEscritura(lugar.id);
+    const payload = {
+      nombre: lugar.nombre,
+      tipo: lugar.tipo || 'ciudad',
+      coordenadas: lugar.coordenadas,
+      departamento: lugar.departamento || '',
+      autorUid: lugar.autorUid || miUid || '',
+      autorNombre: lugar.autor || lugar.autorNombre || miNombre || 'Anónimo',
+      actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    // creado solo la primera vez
+    db.collection('lugares').doc(lugar.id).get().then((snap) => {
+      if (!snap.exists) {
+        payload.creado = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      return db.collection('lugares').doc(lugar.id).set(payload, { merge: true });
+    }).catch((err) => console.warn('Error guardando lugar manual', lugar.id, err));
+  }
+
+  /** Restablecer: borra solo registros/{id}. */
+  function borrarRegistroEnNube(id) {
+    if (!db || !syncListo || !id) return;
+    marcarEscritura(id);
+    db.collection('registros').doc(id).delete()
+      .catch((err) => console.warn('Error borrando registro', id, err));
+  }
+
+  /** Eliminar pin manual: borra lugares/{id} y registros/{id}. */
+  function borrarLugarManualEnNube(id) {
+    if (!db || !syncListo || !id) return;
+    marcarEscritura(id);
+    const batch = db.batch();
+    batch.delete(db.collection('lugares').doc(id));
+    batch.delete(db.collection('registros').doc(id));
+    batch.commit().catch((err) => console.warn('Error borrando lugar manual', id, err));
+  }
+
+  function aplicarSnapshotRegistros(snapshot, esPrimera) {
+    let huboCambioAjeno = false;
+    snapshot.docChanges().forEach((change) => {
+      const id = change.doc.id;
+      if (escribiendoIds.has(id) && change.type === 'modified') return;
+
+      if (change.type === 'removed') {
+        if (datos[id]) {
+          delete datos[id];
+          huboCambioAjeno = true;
+        }
+        return;
+      }
+
+      const reg = registroDesdeDoc(id, change.doc.data());
+      if (!reg) return;
+      const prev = datos[id];
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(reg)) {
+        datos[id] = reg;
+        huboCambioAjeno = true;
+      }
+    });
+
+    // Primera carga completa: reconstruir mapa de datos desde todos los docs
+    if (esPrimera) {
+      const nuevo = {};
+      snapshot.docs.forEach((doc) => {
+        const reg = registroDesdeDoc(doc.id, doc.data());
+        if (reg) nuevo[doc.id] = reg;
       });
+      datos = nuevo;
+      huboCambioAjeno = true;
+    }
+
+    if (huboCambioAjeno) {
+      guardarCacheLocal();
+      reconstruir();
+      if (!esPrimera) toast('Mapa actualizado desde la nube');
+    }
+  }
+
+  function aplicarSnapshotLugares(snapshot, esPrimera) {
+    let huboCambioAjeno = false;
+
+    if (esPrimera) {
+      const lista = [];
+      snapshot.docs.forEach((doc) => {
+        const l = lugarDesdeDoc(doc.id, doc.data());
+        if (l) lista.push(l);
+      });
+      // Fusionar con custom local que aún no esté en nube (caché)
+      const idsNube = new Set(lista.map((l) => l.id));
+      custom.forEach((c) => {
+        if (!idsNube.has(c.id)) lista.push(c);
+      });
+      custom = lista;
+      huboCambioAjeno = true;
+    } else {
+      snapshot.docChanges().forEach((change) => {
+        const id = change.doc.id;
+        if (escribiendoIds.has(id) && change.type === 'modified') return;
+
+        if (change.type === 'removed') {
+          const antes = custom.length;
+          custom = custom.filter((c) => c.id !== id);
+          if (custom.length !== antes) huboCambioAjeno = true;
+          return;
+        }
+
+        const l = lugarDesdeDoc(id, change.doc.data());
+        if (!l) return;
+        const idx = custom.findIndex((c) => c.id === id);
+        if (idx >= 0) custom[idx] = l;
+        else custom.push(l);
+        huboCambioAjeno = true;
+      });
+    }
+
+    if (huboCambioAjeno) {
+      guardarCacheLocal();
+      reconstruir();
+      if (!esPrimera) toast('Mapa actualizado desde la nube');
+    }
+  }
+
+  function aplicarSnapshotOcultos(snapshot) {
+    const set = new Set();
+    snapshot.docs.forEach((doc) => {
+      const d = doc.data();
+      // id del doc o campo nombre
+      if (d && d.nombre) set.add(d.nombre);
+      else set.add(doc.id);
+    });
+    autoresOcultos = set;
+    pintarFiltrosAutor();
   }
 
   async function iniciarNube() {
+    miUid = obtenerUidLocal();
+
     if (!db || typeof firebase === 'undefined') {
       console.warn('Firebase SDK no cargado');
       return;
     }
 
-    // Login anónimo opcional: si la API key de Auth falla, seguimos con Firestore
     try {
       await firebase.auth().signInAnonymously();
-      console.log('Firebase Auth: sesión anónima OK');
+      if (firebase.auth().currentUser) {
+        miUid = firebase.auth().currentUser.uid;
+        try { localStorage.setItem(LOCAL_UID_KEY, miUid); } catch (_) {}
+      }
+      console.log('Firebase Auth OK, uid:', miUid);
     } catch (err) {
-      console.warn('Auth anónimo falló (se continúa sin login):', err && err.code ? err.code : err);
+      console.warn('Auth anónimo falló (se continúa con uid local):', err && err.code ? err.code : err);
     }
 
     try {
-      const ref = db.collection('mapa').doc('compartido');
+      let primeraRegistros = true;
+      let primeraLugares = true;
 
-      // Cargar datos existentes de la nube
-      const snap = await ref.get();
-      if (snap.exists) {
-        const p = snap.data();
-        if (p.datos && typeof p.datos === 'object') datos = p.datos;
-        if (Array.isArray(p.custom)) custom = p.custom.filter(lugarValido);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, custom }));
-        } catch (_) {}
-      }
+      db.collection('registros').onSnapshot((snap) => {
+        aplicarSnapshotRegistros(snap, primeraRegistros);
+        primeraRegistros = false;
+      }, (err) => {
+        console.warn('Error escuchando registros:', err);
+        toast('No se pudo escuchar registros');
+      });
+
+      db.collection('lugares').onSnapshot((snap) => {
+        aplicarSnapshotLugares(snap, primeraLugares);
+        primeraLugares = false;
+      }, (err) => {
+        console.warn('Error escuchando lugares:', err);
+      });
+
+      db.collection('ocultos').onSnapshot((snap) => {
+        aplicarSnapshotOcultos(snap);
+      }, (err) => {
+        console.warn('Error escuchando ocultos:', err);
+      });
 
       syncListo = true;
-      let primeraVez = true;
       toast('Conectado a la nube');
-
-      // Escuchar cambios en tiempo real (cuando otra persona edita)
-      ref.onSnapshot((doc) => {
-        if (escribiendoNube) return;
-        if (!doc.exists) return;
-        const p = doc.data();
-        const nuevosDatos = p.datos && typeof p.datos === 'object' ? p.datos : {};
-        const nuevosCustom = Array.isArray(p.custom) ? p.custom.filter(lugarValido) : [];
-        datos = nuevosDatos;
-        custom = nuevosCustom;
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ datos, custom }));
-        } catch (_) {}
-        if (!primeraVez) {
-          reconstruir();
-          toast('Mapa actualizado desde la nube');
-        }
-        primeraVez = false;
-      }, (err) => {
-        console.warn('Error escuchando la nube:', err);
-        toast('No se pudo escuchar la nube');
-      });
     } catch (err) {
       console.warn('Nube no disponible, se usa solo este dispositivo:', err);
       toast('Sin conexión a la nube (solo este dispositivo)');
@@ -658,6 +852,7 @@
     };
 
     let id = seleccionado;
+    let lugarNuevo = null;
 
     if (modoNuevo) {
       const nombre = String(fd.get('nombre') || '').trim();
@@ -672,33 +867,34 @@
       if (!miNombre) {
         toast('Escribe tu nombre arriba (barra lateral) para identificar tus pines');
       }
-      const lugar = {
+      lugarNuevo = {
         id: `custom-${Date.now().toString(36)}`,
         nombre,
         tipo: fd.get('tipo') === 'lugar' ? 'lugar' : 'ciudad',
         coordenadas: [lat, lng],
         personalizado: true,
         autor: nombreAutor,
+        autorUid: miUid || '',
       };
-      if (fd.get('departamento')) lugar.departamento = fd.get('departamento');
+      if (fd.get('departamento')) lugarNuevo.departamento = fd.get('departamento');
 
-      custom.push(lugar);
-      lugares.push(lugar);
-      crearMarker(lugar);
-      id = lugar.id;
+      custom.push(lugarNuevo);
+      lugares.push(lugarNuevo);
+      crearMarker(lugarNuevo);
+      id = lugarNuevo.id;
       cancelarNuevo();
     }
 
     if (!id) return;
     datos[id] = registro;
-    guardarStorage();
-    refrescarTodo();
+    guardarCacheLocal();
 
-    if (modoNuevo === false && !seleccionado) {
-      abrirPanel(id, { revelar: false });
-    } else {
-      actualizarMarker(id);
-    }
+    // Firestore: un documento por elemento
+    if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
+    guardarRegistroEnNube(id, registro);
+
+    refrescarTodo();
+    actualizarMarker(id);
     toast('Cambios guardados');
   }
 
@@ -711,20 +907,25 @@
 
     if (l.personalizado) {
       if (!confirm(`¿Eliminar "${l.nombre}" del mapa?`)) return;
-      custom = custom.filter((c) => c.id !== l.id);
-      lugares = lugares.filter((x) => x.id !== l.id);
-      delete datos[l.id];
-      const m = markers.get(l.id);
-      if (m) { capa.removeLayer(m); markers.delete(l.id); }
+      const id = l.id;
+      custom = custom.filter((c) => c.id !== id);
+      lugares = lugares.filter((x) => x.id !== id);
+      delete datos[id];
+      const m = markers.get(id);
+      if (m) { capa.removeLayer(m); markers.delete(id); }
+      borrarLugarManualEnNube(id);
+      guardarCacheLocal();
       cerrarPanel();
       toast('Lugar eliminado');
     } else {
       if (!confirm(`¿Borrar estado, fechas y notas de "${l.nombre}"?`)) return;
-      delete datos[l.id];
-      abrirPanel(l.id, { revelar: false });
+      const id = l.id;
+      delete datos[id];
+      borrarRegistroEnNube(id);
+      guardarCacheLocal();
+      abrirPanel(id, { revelar: false });
       toast('Datos restablecidos');
     }
-    guardarStorage();
     refrescarTodo();
   });
 
@@ -896,7 +1097,10 @@
         }
       });
 
-      guardarStorage();
+      guardarCacheLocal();
+      // Subir cada documento a Firestore (no un único doc global)
+      Object.keys(datos).forEach((id) => guardarRegistroEnNube(id, datos[id]));
+      custom.forEach((c) => guardarLugarManualEnNube(c));
       cerrarPanel();
       reconstruir();
       toast(`Respaldo combinado: ${nuevos} nuevos, ${actualizados} actualizados`);

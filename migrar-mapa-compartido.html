@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Migración mapa/compartido → lugares + registros</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+    button { font-size: 1rem; padding: 0.6rem 1.2rem; cursor: pointer; }
+    pre { background: #f4f4f5; padding: 1rem; border-radius: 8px; overflow: auto; font-size: 13px; }
+    .ok { color: #15803d; }
+    .err { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>Migración Firestore (una sola vez)</h1>
+  <p>
+    Lee el documento antiguo <code>mapa/compartido</code> y crea:
+  </p>
+  <ul>
+    <li><code>lugares/{id}</code> — solo pines manuales (<code>custom</code>)</li>
+    <li><code>registros/{id}</code> — estados/notas/fechas (<code>datos</code>)</li>
+  </ul>
+  <p><strong>No borra</strong> el documento antiguo (puedes borrarlo tú después de verificar).</p>
+  <p>Abre este archivo sirviéndolo desde tu proyecto (mismo origen que el mapa) o pégalo en GitHub Pages temporalmente.
+     Necesita el SDK de Firebase y la config de tu proyecto.</p>
+  <button id="btn" type="button">Ejecutar migración</button>
+  <pre id="log">Listo.</pre>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0r8KU9HpjJ6CYGcrwqJuuM4LWwmMbTw0",
+      authDomain: "mapa-interactivo-nicaragua.firebaseapp.com",
+      projectId: "mapa-interactivo-nicaragua",
+      storageBucket: "mapa-interactivo-nicaragua.firebasestorage.app",
+      messagingSenderId: "992556323603",
+      appId: "1:992556323603:web:6903297e5016173a0540e6"
+    };
+
+    const logEl = document.getElementById('log');
+    function log(msg, cls) {
+      const line = document.createElement('div');
+      if (cls) line.className = cls;
+      line.textContent = msg;
+      logEl.appendChild(line);
+    }
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      logEl.textContent = '';
+      try {
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        try {
+          await firebase.auth().signInAnonymously();
+          log('Auth anónimo OK');
+        } catch (e) {
+          log('Auth falló, se intenta igual: ' + (e.code || e.message));
+        }
+
+        const snap = await db.collection('mapa').doc('compartido').get();
+        if (!snap.exists) {
+          log('No existe mapa/compartido. Nada que migrar.', 'err');
+          return;
+        }
+        const p = snap.data() || {};
+        const datos = p.datos && typeof p.datos === 'object' ? p.datos : {};
+        const custom = Array.isArray(p.custom) ? p.custom : [];
+        log('Registros a migrar: ' + Object.keys(datos).length);
+        log('Lugares manuales a migrar: ' + custom.length);
+
+        let nReg = 0;
+        let nLug = 0;
+        const BATCH = 400;
+        let batch = db.batch();
+        let ops = 0;
+
+        async function flush() {
+          if (ops === 0) return;
+          await batch.commit();
+          batch = db.batch();
+          ops = 0;
+        }
+
+        for (const id of Object.keys(datos)) {
+          const d = datos[id] || {};
+          const ref = db.collection('registros').doc(id);
+          batch.set(ref, {
+            estado: d.estado || 'sin_marcar',
+            fechaVisita: d.fechaVisita || '',
+            fechaPrevista: d.fechaPrevista || '',
+            notas: d.notas || '',
+            autorUid: '',
+            autorNombre: d.autor || '',
+            actualizadoPor: d.actualizadoPor || d.autor || '',
+            actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          ops++;
+          nReg++;
+          if (ops >= BATCH) await flush();
+        }
+
+        for (const c of custom) {
+          if (!c || !c.id || !Array.isArray(c.coordenadas)) continue;
+          const ref = db.collection('lugares').doc(c.id);
+          batch.set(ref, {
+            nombre: c.nombre || 'Sin nombre',
+            tipo: c.tipo === 'lugar' ? 'lugar' : 'ciudad',
+            coordenadas: c.coordenadas,
+            departamento: c.departamento || '',
+            autorUid: c.autorUid || '',
+            autorNombre: c.autor || c.autorNombre || '',
+            creado: firebase.firestore.FieldValue.serverTimestamp(),
+            actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          ops++;
+          nLug++;
+          if (ops >= BATCH) await flush();
+        }
+
+        await flush();
+        log('Migración terminada.', 'ok');
+        log('registros escritos: ' + nReg, 'ok');
+        log('lugares escritos: ' + nLug, 'ok');
+        log('Puedes verificar en la consola de Firestore y luego borrar mapa/compartido si todo está bien.');
+      } catch (err) {
+        console.error(err);
+        log('Error: ' + (err.message || err), 'err');
+      }
+    });
+  </script>
+</body>
+</html>
