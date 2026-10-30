@@ -17,7 +17,7 @@
 
   // ---------- Firebase (mapa compartido entre varias personas) ----------
   const firebaseConfig = {
-    apiKey: "AIzaSyB0r8KU9HpjJ6CYGcrwqJuuM4LWwmMbTw0",
+    apiKey: "AIzaSyC9-nuSFJr5BKFGYyertEo63UkYxJlzWDk",
     authDomain: "mapa-interactivo-nicaragua.firebaseapp.com",
     projectId: "mapa-interactivo-nicaragua",
     storageBucket: "mapa-interactivo-nicaragua.firebasestorage.app",
