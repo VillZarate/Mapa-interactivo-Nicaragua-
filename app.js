@@ -3,7 +3,6 @@
    - Lugares base: data/lugares.json
    - Tus datos (estado, fechas, notas) y lugares añadidos
      se guardan en localStorage de este navegador.
-     
    ========================================================== */
 (() => {
   'use strict';
@@ -33,6 +32,12 @@
   /** autores ocultos del filtro (colección ocultos) */
   let autoresOcultos = new Set();
   let miUid = '';
+  let miNombre = '';
+  /** true solo con sesión y email verificado */
+  let nubePermitida = false;
+  let unsubRegistros = null;
+  let unsubLugares = null;
+  let unsubOcultos = null;
 
   try {
     if (typeof firebase !== 'undefined') {
@@ -43,17 +48,37 @@
     console.warn('Firebase no se pudo iniciar:', err);
   }
 
-  function obtenerUidLocal() {
-    try {
-      let u = localStorage.getItem(LOCAL_UID_KEY);
-      if (!u) {
-        u = 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-        localStorage.setItem(LOCAL_UID_KEY, u);
-      }
-      return u;
-    } catch (_) {
-      return 'local-temp';
+  function nombreDesdeUsuario(user) {
+    if (!user) return 'Anónimo';
+    if (user.displayName && String(user.displayName).trim()) {
+      return String(user.displayName).trim().slice(0, 40);
     }
+    const email = user.email || '';
+    const parte = email.split('@')[0] || 'Usuario';
+    return parte.slice(0, 40);
+  }
+
+  function puedeEscribirNube() {
+    return !!(db && syncListo && nubePermitida);
+  }
+
+  function errorAuthEs(code, fallback) {
+    const map = {
+      'auth/invalid-email': 'El correo no es válido.',
+      'auth/user-disabled': 'Esta cuenta está deshabilitada.',
+      'auth/user-not-found': 'No hay ninguna cuenta con ese correo.',
+      'auth/wrong-password': 'Contraseña incorrecta.',
+      'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+      'auth/email-already-in-use': 'Ese correo ya está registrado.',
+      'auth/weak-password': 'La contraseña es demasiado débil (mínimo 8 caracteres).',
+      'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+      'auth/network-request-failed': 'Error de red. Revisa tu conexión.',
+      'auth/missing-email': 'Escribe tu correo.',
+      'auth/invalid-api-key': 'Clave de API no válida. Revisa firebaseConfig.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Clave de API no válida.',
+      'auth/operation-not-allowed': 'Este método de acceso no está habilitado en Firebase.',
+    };
+    return map[code] || fallback || ('Error: ' + (code || 'desconocido'));
   }
 
   // Único lugar donde se definen los estados y sus colores.
@@ -124,7 +149,6 @@
   let mostrarDeps = true;
   let mostrarCiudades = true;
   let soloManuales = false;
-  let miNombre = '';
 
   let seleccionado = null;
   let modoNuevo = false;
@@ -134,22 +158,6 @@
   const vacio = () => ({ estado: 'sin_marcar', fechaVisita: '', fechaPrevista: '', notas: '', autor: '', actualizadoPor: '' });
   const info = (id) => ({ ...vacio(), ...(datos[id] || {}) });
   const porId = (id) => lugares.find((l) => l.id === id);
-
-  function cargarNombre() {
-    try {
-      miNombre = localStorage.getItem(AUTOR_KEY) || '';
-    } catch (_) {
-      miNombre = '';
-    }
-  }
-
-  function guardarNombre(nombre) {
-    miNombre = String(nombre || '').trim().slice(0, 40);
-    try {
-      if (miNombre) localStorage.setItem(AUTOR_KEY, miNombre);
-      else localStorage.removeItem(AUTOR_KEY);
-    } catch (_) {}
-  }
 
   function autoresPresentes() {
     const set = new Set();
@@ -242,49 +250,67 @@
     return lugarValido(lugar) ? lugar : null;
   }
 
-  /** Crea o actualiza registros/{id} (un documento por lugar). */
+  /** Crea o actualiza registros/{id} (un documento por lugar).
+   *  autorUid / autorNombre solo en la creación; al actualizar no se tocan. */
   function guardarRegistroEnNube(id, registro) {
-    if (!db || !syncListo || !id) return;
+    if (!puedeEscribirNube() || !id) return;
     marcarEscritura(id);
-    const payload = {
+    const ref = db.collection('registros').doc(id);
+    const base = {
       estado: registro.estado || 'sin_marcar',
       fechaVisita: registro.fechaVisita || '',
       fechaPrevista: registro.fechaPrevista || '',
       notas: registro.notas || '',
-      autorUid: miUid || '',
-      autorNombre: registro.autor || miNombre || 'Anónimo',
       actualizadoPor: registro.actualizadoPor || miNombre || 'Anónimo',
       actualizado: firebase.firestore.FieldValue.serverTimestamp(),
     };
-    db.collection('registros').doc(id).set(payload, { merge: true })
-      .catch((err) => console.warn('Error guardando registro', id, err));
+    ref.get().then((snap) => {
+      if (snap.exists) {
+        // Ya existe en la nube: no tocar autorUid ni autorNombre
+        return ref.set(base, { merge: true });
+      }
+      // Primera vez en la nube
+      return ref.set({
+        ...base,
+        autorUid: miUid || '',
+        autorNombre: registro.autor || miNombre || 'Anónimo',
+      }, { merge: true });
+    }).catch((err) => console.warn('Error guardando registro', id, err));
   }
 
-  /** Crea o actualiza lugares/{id} (solo pines manuales). */
+  /** Crea o actualiza lugares/{id} (solo pines manuales).
+   *  Nunca modifica autorUid de un pin que ya existe. */
   function guardarLugarManualEnNube(lugar) {
-    if (!db || !syncListo || !lugar || !lugar.id) return;
+    if (!puedeEscribirNube() || !lugar || !lugar.id) return;
     marcarEscritura(lugar.id);
-    const payload = {
-      nombre: lugar.nombre,
-      tipo: lugar.tipo || 'ciudad',
-      coordenadas: lugar.coordenadas,
-      departamento: lugar.departamento || '',
-      autorUid: lugar.autorUid || miUid || '',
-      autorNombre: lugar.autor || lugar.autorNombre || miNombre || 'Anónimo',
-      actualizado: firebase.firestore.FieldValue.serverTimestamp(),
-    };
-    // creado solo la primera vez
-    db.collection('lugares').doc(lugar.id).get().then((snap) => {
-      if (!snap.exists) {
-        payload.creado = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = db.collection('lugares').doc(lugar.id);
+    ref.get().then((snap) => {
+      if (snap.exists) {
+        const payload = {
+          nombre: lugar.nombre,
+          tipo: lugar.tipo || 'ciudad',
+          coordenadas: lugar.coordenadas,
+          departamento: lugar.departamento || '',
+          actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+        return ref.set(payload, { merge: true });
       }
-      return db.collection('lugares').doc(lugar.id).set(payload, { merge: true });
+      return ref.set({
+        nombre: lugar.nombre,
+        tipo: lugar.tipo || 'ciudad',
+        coordenadas: lugar.coordenadas,
+        departamento: lugar.departamento || '',
+        autorUid: miUid || '',
+        autorNombre: lugar.autor || lugar.autorNombre || miNombre || 'Anónimo',
+        creado: firebase.firestore.FieldValue.serverTimestamp(),
+        actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
     }).catch((err) => console.warn('Error guardando lugar manual', lugar.id, err));
   }
 
   /** Restablecer: borra solo registros/{id}. */
   function borrarRegistroEnNube(id) {
-    if (!db || !syncListo || !id) return;
+    if (!puedeEscribirNube() || !id) return;
     marcarEscritura(id);
     db.collection('registros').doc(id).delete()
       .catch((err) => console.warn('Error borrando registro', id, err));
@@ -292,7 +318,7 @@
 
   /** Eliminar pin manual: borra lugares/{id} y registros/{id}. */
   function borrarLugarManualEnNube(id) {
-    if (!db || !syncListo || !id) return;
+    if (!puedeEscribirNube() || !id) return;
     marcarEscritura(id);
     const batch = db.batch();
     batch.delete(db.collection('lugares').doc(id));
@@ -397,56 +423,120 @@
     pintarFiltrosAutor();
   }
 
-  async function iniciarNube() {
-    miUid = obtenerUidLocal();
+  function detenerEscuchaNube() {
+    if (unsubRegistros) { unsubRegistros(); unsubRegistros = null; }
+    if (unsubLugares) { unsubLugares(); unsubLugares = null; }
+    if (unsubOcultos) { unsubOcultos(); unsubOcultos = null; }
+    syncListo = false;
+    nubePermitida = false;
+  }
 
+  function conectarEscuchaNube() {
+    if (!db || syncListo) return;
+    let primeraRegistros = true;
+    let primeraLugares = true;
+
+    function avisoPermisoFirestore(err) {
+      const code = err && err.code ? err.code : '';
+      if (code === 'permission-denied' || /permission|insufficient/i.test(String(err && err.message))) {
+        toast('Tu correo no está autorizado. Pide acceso al administrador.');
+      } else {
+        console.warn('Error Firestore:', err);
+      }
+    }
+
+    unsubRegistros = db.collection('registros').onSnapshot((snap) => {
+      aplicarSnapshotRegistros(snap, primeraRegistros);
+      primeraRegistros = false;
+    }, (err) => {
+      console.warn('Error escuchando registros:', err);
+      avisoPermisoFirestore(err);
+    });
+
+    unsubLugares = db.collection('lugares').onSnapshot((snap) => {
+      aplicarSnapshotLugares(snap, primeraLugares);
+      primeraLugares = false;
+    }, (err) => {
+      console.warn('Error escuchando lugares:', err);
+      avisoPermisoFirestore(err);
+    });
+
+    unsubOcultos = db.collection('ocultos').onSnapshot((snap) => {
+      aplicarSnapshotOcultos(snap);
+    }, (err) => {
+      console.warn('Error escuchando ocultos:', err);
+      avisoPermisoFirestore(err);
+    });
+
+    syncListo = true;
+    nubePermitida = true;
+    toast('Conectado a la nube');
+  }
+
+  function actualizarUISesion(user) {
+    const info = $('#session-info');
+    const btnLogin = $('#btn-login');
+    const btnLogout = $('#btn-logout');
+    const btnVerify = $('#btn-verify');
+    if (!info) return;
+
+    if (!user) {
+      info.textContent = 'Sin sesión · solo datos locales';
+      info.classList.remove('is-on');
+      if (btnLogin) btnLogin.hidden = false;
+      if (btnLogout) btnLogout.hidden = true;
+      if (btnVerify) btnVerify.hidden = true;
+      return;
+    }
+
+    if (!user.emailVerified) {
+      info.textContent = 'Cuenta sin verificar · revisa tu correo (' + (user.email || '') + ')';
+      info.classList.remove('is-on');
+      if (btnLogin) btnLogin.hidden = true;
+      if (btnLogout) btnLogout.hidden = false;
+      if (btnVerify) btnVerify.hidden = false;
+      return;
+    }
+
+    info.textContent = 'Conectado: ' + miNombre + (user.email ? ' · ' + user.email : '');
+    info.classList.add('is-on');
+    if (btnLogin) btnLogin.hidden = true;
+    if (btnLogout) btnLogout.hidden = false;
+    if (btnVerify) btnVerify.hidden = true;
+  }
+
+  function aplicarUsuario(user) {
+    detenerEscuchaNube();
+
+    if (!user) {
+      miUid = '';
+      miNombre = '';
+      actualizarUISesion(null);
+      return;
+    }
+
+    miUid = user.uid;
+    miNombre = nombreDesdeUsuario(user);
+    try { localStorage.setItem(LOCAL_UID_KEY, miUid); } catch (_) {}
+    actualizarUISesion(user);
+
+    if (!user.emailVerified) {
+      toast('Verifica tu correo para sincronizar con la nube');
+      return;
+    }
+
+    conectarEscuchaNube();
+  }
+
+  function iniciarAuth() {
     if (!db || typeof firebase === 'undefined') {
       console.warn('Firebase SDK no cargado');
       return;
     }
-
-    try {
-      await firebase.auth().signInAnonymously();
-      if (firebase.auth().currentUser) {
-        miUid = firebase.auth().currentUser.uid;
-        try { localStorage.setItem(LOCAL_UID_KEY, miUid); } catch (_) {}
-      }
-      console.log('Firebase Auth OK, uid:', miUid);
-    } catch (err) {
-      console.warn('Auth anónimo falló (se continúa con uid local):', err && err.code ? err.code : err);
-    }
-
-    try {
-      let primeraRegistros = true;
-      let primeraLugares = true;
-
-      db.collection('registros').onSnapshot((snap) => {
-        aplicarSnapshotRegistros(snap, primeraRegistros);
-        primeraRegistros = false;
-      }, (err) => {
-        console.warn('Error escuchando registros:', err);
-        toast('No se pudo escuchar registros');
-      });
-
-      db.collection('lugares').onSnapshot((snap) => {
-        aplicarSnapshotLugares(snap, primeraLugares);
-        primeraLugares = false;
-      }, (err) => {
-        console.warn('Error escuchando lugares:', err);
-      });
-
-      db.collection('ocultos').onSnapshot((snap) => {
-        aplicarSnapshotOcultos(snap);
-      }, (err) => {
-        console.warn('Error escuchando ocultos:', err);
-      });
-
-      syncListo = true;
-      toast('Conectado a la nube');
-    } catch (err) {
-      console.warn('Nube no disponible, se usa solo este dispositivo:', err);
-      toast('Sin conexión a la nube (solo este dispositivo)');
-    }
+    // Sin login anónimo: solo correo/contraseña
+    firebase.auth().onAuthStateChanged((user) => {
+      aplicarUsuario(user);
+    });
   }
 
   function lugarValido(l) {
@@ -890,13 +980,17 @@
     datos[id] = registro;
     guardarCacheLocal();
 
-    // Firestore: un documento por elemento
-    if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
-    guardarRegistroEnNube(id, registro);
+    // Firestore solo con sesión y correo verificado
+    if (puedeEscribirNube()) {
+      if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
+      guardarRegistroEnNube(id, registro);
+      toast('Cambios guardados en la nube');
+    } else {
+      toast('Guardado solo en este dispositivo · inicia sesión y verifica el correo para compartir');
+    }
 
     refrescarTodo();
     actualizarMarker(id);
-    toast('Cambios guardados');
   }
 
   form.addEventListener('submit', (e) => { e.preventDefault(); guardar(); });
@@ -1004,17 +1098,156 @@
     });
   }
 
-  const inputNombre = $('#mi-nombre');
-  if (inputNombre) {
-    inputNombre.value = miNombre;
-    inputNombre.addEventListener('change', () => {
-      guardarNombre(inputNombre.value);
-      toast(miNombre ? `Nombre guardado: ${miNombre}` : 'Nombre borrado');
+  /* ---------- Auth UI ---------- */
+  const authModal = $('#auth-modal');
+  const authForm = $('#auth-form');
+  const authError = $('#auth-error');
+  const authMsg = $('#auth-msg');
+  const authName = $('#auth-name');
+  const authNameWrap = $('#auth-name-wrap');
+
+  function mostrarAuthError(texto) {
+    if (!authError) return;
+    authError.hidden = !texto;
+    authError.textContent = texto || '';
+    if (authMsg) authMsg.hidden = true;
+  }
+  function mostrarAuthMsg(texto) {
+    if (!authMsg) return;
+    authMsg.hidden = !texto;
+    authMsg.textContent = texto || '';
+    if (authError) authError.hidden = true;
+  }
+  function abrirAuthModal() {
+    if (!authModal) return;
+    authModal.hidden = false;
+    authModal.setAttribute('aria-hidden', 'false');
+    mostrarAuthError('');
+    mostrarAuthMsg('');
+    if (authName) {
+      authName.hidden = true;
+      if (authNameWrap) authNameWrap.hidden = true;
+    }
+    setTimeout(() => $('#auth-email') && $('#auth-email').focus(), 50);
+  }
+  function cerrarAuthModal() {
+    if (!authModal) return;
+    authModal.hidden = true;
+    authModal.setAttribute('aria-hidden', 'true');
+  }
+
+  if ($('#btn-login')) $('#btn-login').addEventListener('click', abrirAuthModal);
+  if ($('#btn-logout')) {
+    $('#btn-logout').addEventListener('click', async () => {
+      try {
+        await firebase.auth().signOut();
+        toast('Sesión cerrada');
+      } catch (err) {
+        toast(errorAuthEs(err.code, err.message));
+      }
     });
-    inputNombre.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        inputNombre.blur();
+  }
+  if ($('#btn-verify')) {
+    $('#btn-verify').addEventListener('click', async () => {
+      const user = firebase.auth().currentUser;
+      if (!user) {
+        toast('No hay sesión activa');
+        return;
+      }
+      try {
+        await user.reload();
+        await user.getIdToken(true);
+        const refreshed = firebase.auth().currentUser;
+        aplicarUsuario(refreshed);
+        if (refreshed && refreshed.emailVerified) {
+          toast('Correo verificado · conectando a la nube');
+        } else {
+          toast('Aún no está verificado. Revisa tu bandeja de entrada.');
+        }
+      } catch (err) {
+        toast(errorAuthEs(err.code, err.message));
+      }
+    });
+  }
+  document.querySelectorAll('[data-auth-close]').forEach((el) => {
+    el.addEventListener('click', cerrarAuthModal);
+  });
+
+  if (authForm) {
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = ($('#auth-email') && $('#auth-email').value || '').trim();
+      const pass = ($('#auth-password') && $('#auth-password').value) || '';
+      if (pass.length < 8) {
+        mostrarAuthError('La contraseña debe tener al menos 8 caracteres.');
+        return;
+      }
+      mostrarAuthError('');
+      try {
+        await firebase.auth().signInWithEmailAndPassword(email, pass);
+        const u = firebase.auth().currentUser;
+        if (u && !u.emailVerified) {
+          mostrarAuthMsg('Entra a tu correo y verifica la cuenta para sincronizar la nube.');
+        } else {
+          cerrarAuthModal();
+          toast('Sesión iniciada');
+        }
+      } catch (err) {
+        mostrarAuthError(errorAuthEs(err.code, err.message));
+      }
+    });
+  }
+
+  if ($('#auth-register')) {
+    $('#auth-register').addEventListener('click', async () => {
+      const email = ($('#auth-email') && $('#auth-email').value || '').trim();
+      const pass = ($('#auth-password') && $('#auth-password').value) || '';
+      const nombre = (authName && authName.value || '').trim().slice(0, 40);
+
+      if (authName && authName.hidden) {
+        authName.hidden = false;
+        if (authNameWrap) authNameWrap.hidden = false;
+        authName.required = true;
+        mostrarAuthMsg('Escribe un nombre para mostrar y pulsa otra vez «Crear cuenta».');
+        authName.focus();
+        return;
+      }
+      if (!nombre) {
+        mostrarAuthError('Indica un nombre para mostrar.');
+        return;
+      }
+      if (pass.length < 8) {
+        mostrarAuthError('La contraseña debe tener al menos 8 caracteres.');
+        return;
+      }
+      mostrarAuthError('');
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+        if (cred.user) {
+          await cred.user.updateProfile({ displayName: nombre });
+          await cred.user.sendEmailVerification();
+          miNombre = nombre;
+          mostrarAuthMsg('Cuenta creada. Te enviamos un correo de verificación. Debes verificarlo antes de escribir en la nube.');
+          toast('Revisa tu correo para verificar la cuenta');
+        }
+      } catch (err) {
+        mostrarAuthError(errorAuthEs(err.code, err.message));
+      }
+    });
+  }
+
+  if ($('#auth-forgot')) {
+    $('#auth-forgot').addEventListener('click', async () => {
+      const email = ($('#auth-email') && $('#auth-email').value || '').trim();
+      if (!email) {
+        mostrarAuthError('Escribe tu correo arriba para recuperar la contraseña.');
+        return;
+      }
+      try {
+        await firebase.auth().sendPasswordResetEmail(email);
+        mostrarAuthMsg('Te enviamos un enlace para restablecer la contraseña.');
+      } catch (err) {
+        mostrarAuthError(errorAuthEs(err.code, err.message));
       }
     });
   }
@@ -1135,16 +1368,14 @@
     $('#chk-deps').checked = true;
     $('#chk-ciudades').checked = true;
     if ($('#chk-manuales')) $('#chk-manuales').checked = false;
-    cargarNombre();
-    if ($('#mi-nombre')) $('#mi-nombre').value = miNombre;
     pintarEstados();
     pintarFiltros();
     cargarStorage();
     await cargarBase();
-    // Conectar a la nube (si falla, sigue con datos locales)
-    await iniciarNube();
     reconstruir();
     pintarFiltrosAutor();
+    // Auth por correo (sin anónimo). Nube solo con sesión verificada.
+    iniciarAuth();
   }
 
   iniciar();
