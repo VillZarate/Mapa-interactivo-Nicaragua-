@@ -3,6 +3,7 @@
    - Lugares base: data/lugares.json
    - Tus datos (estado, fechas, notas) y lugares añadidos
      se guardan en localStorage de este navegador.
+     
    ========================================================== */
 (() => {
   'use strict';
