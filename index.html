@@ -64,11 +64,13 @@
           <label><input type="checkbox" id="chk-manuales" autocomplete="off"> Solo pines manuales</label>
         </div>
 
-        <div class="autor-box">
-          <label class="field-inline">
-            <span>Tu nombre</span>
-            <input type="text" id="mi-nombre" maxlength="40" placeholder="Ej. Ana" autocomplete="nickname">
-          </label>
+        <div class="session-box" id="session-box">
+          <div id="session-info" class="session-info">Sin sesión · solo datos locales</div>
+          <div class="session-actions">
+            <button type="button" id="btn-login" class="btn btn--soft">Iniciar sesión</button>
+            <button type="button" id="btn-verify" class="btn btn--soft" hidden>Ya verifiqué mi correo</button>
+            <button type="button" id="btn-logout" class="btn btn--soft" hidden>Cerrar sesión</button>
+          </div>
           <div id="filtros-autor" class="chips chips-autor" role="group" aria-label="Filtrar por autor"></div>
         </div>
       </div>
@@ -170,6 +172,37 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Modal de autenticación -->
+  <div id="auth-modal" class="auth-modal" hidden aria-hidden="true">
+    <div class="auth-backdrop" data-auth-close></div>
+    <div class="auth-card" role="dialog" aria-labelledby="auth-title">
+      <button type="button" class="auth-close" data-auth-close aria-label="Cerrar">×</button>
+      <h2 id="auth-title">Iniciar sesión</h2>
+      <p class="auth-lead">Con una cuenta verificada puedes sincronizar y compartir el mapa en la nube.</p>
+      <form id="auth-form" autocomplete="on">
+        <label class="field">
+          <span id="auth-name-wrap" hidden>Nombre para mostrar</span>
+          <input id="auth-name" type="text" maxlength="40" placeholder="Ej. Ana" autocomplete="name" hidden>
+        </label>
+        <label class="field">
+          <span>Correo</span>
+          <input id="auth-email" type="email" required placeholder="tu@correo.com" autocomplete="email">
+        </label>
+        <label class="field">
+          <span>Contraseña</span>
+          <input id="auth-password" type="password" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="current-password">
+        </label>
+        <p id="auth-error" class="auth-error" hidden></p>
+        <p id="auth-msg" class="auth-msg" hidden></p>
+        <div class="auth-actions">
+          <button type="submit" id="auth-submit" class="btn btn--primary">Entrar</button>
+          <button type="button" id="auth-register" class="btn btn--soft">Crear cuenta</button>
+        </div>
+        <button type="button" id="auth-forgot" class="link-btn auth-forgot">Olvidé mi contraseña</button>
+      </form>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

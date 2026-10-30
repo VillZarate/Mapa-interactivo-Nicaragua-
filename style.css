@@ -713,3 +713,111 @@ body.adding .leaflet-container { cursor: crosshair; }
 .marker-cluster-small div { width: 30px; height: 30px; margin-left: 5px; margin-top: 5px; line-height: 30px; }
 .marker-cluster-medium div { width: 36px; height: 36px; margin-left: 4px; margin-top: 4px; line-height: 36px; }
 .marker-cluster-large div { width: 44px; height: 44px; margin-left: 3px; margin-top: 3px; line-height: 44px; }
+
+/* ---------- Sesión y modal de login ---------- */
+.session-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+.session-info {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.session-info.is-on { color: var(--lake); }
+.session-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.session-actions .btn { flex: 1; font-size: 13px; padding: 8px 10px; }
+
+.auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.auth-modal[hidden] { display: none !important; }
+.auth-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+.auth-card {
+  position: relative;
+  width: min(400px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.2);
+  z-index: 1;
+}
+.auth-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+}
+.auth-card h2 {
+  margin: 0 0 6px;
+  font-family: var(--font-display, inherit);
+  font-size: 1.25rem;
+}
+.auth-lead {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.auth-card .field { margin-bottom: 10px; }
+.auth-card .field span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.auth-card .field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+.auth-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.auth-forgot {
+  display: block;
+  margin-top: 12px;
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+}
+.auth-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #b91c1c;
+  background: #fef2f2;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.auth-msg {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #14532d;
+  background: #f0fdf4;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
