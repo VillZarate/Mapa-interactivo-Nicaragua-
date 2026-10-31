@@ -1279,6 +1279,14 @@
       btn.textContent = 'Restablecer';
     }
 
+    // Estado/fechas bloqueados si no eres autor ni admin; la nota sí se puede
+    const puedeEstado = esAdmin || esDuenoRegistro(id) || esDuenoLugar(l);
+    form.querySelectorAll('input[name="estado"]').forEach((r) => { r.disabled = !puedeEstado; });
+    if (form.elements.fechaVisita) form.elements.fechaVisita.disabled = !puedeEstado;
+    if (form.elements.fechaPrevista) form.elements.fechaPrevista.disabled = !puedeEstado;
+    const btnSave = form.querySelector('button[type="submit"]');
+    if (btnSave) btnSave.textContent = puedeEstado ? 'Guardar cambios' : 'Guardar mi nota';
+
     mostrarPanel();
     if (opts.revelar !== false) revelar(L.latLng(l.coordenadas));
     renderLista();
@@ -1306,6 +1314,11 @@
     form.elements.lat.value = lat.toFixed(5);
     form.elements.lng.value = lng.toFixed(5);
     form.elements.estado.value = 'quiero';
+    form.querySelectorAll('input[name="estado"]').forEach((r) => { r.disabled = false; });
+    if (form.elements.fechaVisita) form.elements.fechaVisita.disabled = false;
+    if (form.elements.fechaPrevista) form.elements.fechaPrevista.disabled = false;
+    const btnSave = form.querySelector('button[type="submit"]');
+    if (btnSave) btnSave.textContent = 'Guardar cambios';
     resaltarFechas();
 
     $('#p-titulo').textContent = 'Lugar nuevo';
@@ -1393,58 +1406,60 @@
 
     if (!id) return;
 
-    // Solo dueño o admin editan pines manuales ajenos
     const lugarActual = porId(id);
-    if (lugarActual && lugarActual.personalizado && !modoNuevo && !puedeEditarPinManual(lugarActual)) {
-      toast('Solo el autor o un administrador pueden editar este pin');
+    const puedeEstado = !!modoNuevo || esAdmin
+      || (lugarActual && puedeEditarPinManual(lugarActual))
+      || puedeRestablecerRegistro(id);
+
+    // 1) Nota/comentario: cualquiera (local o nube si tiene sesión verificada)
+    const hayNota = !!(notaTexto || (misNotas[id] && misNotas[id].texto));
+    if (hayNota) {
+      misNotas[id] = {
+        texto: notaTexto,
+        visibilidad: notaVis,
+        pendiente: !puedeEscribirNube(),
+      };
+      guardarNotasLocal();
+      if (puedeEscribirNube()) {
+        guardarNotaEnNube(id, notaTexto, notaVis).then(() => {
+          if (misNotas[id]) {
+            delete misNotas[id].pendiente;
+            guardarNotasLocal();
+          }
+        });
+      }
+    }
+
+    // 2) Estado / pin solo autor o admin (un tercero no lo cambia)
+    if (!puedeEstado) {
+      if (!hayNota) {
+        toast('Puedes dejar una nota; el estado solo lo cambia el autor o un admin');
+      } else if (puedeEscribirNube()) {
+        toast('Nota guardada (sin cambiar el estado del lugar)');
+        cargarNotasDeLugar(id);
+      } else {
+        toast('Nota guardada solo aquí · inicia sesión para compartirla');
+      }
       return;
     }
 
-    const previoReg = info(id);
-    const cambioEstadoOFechas = !previoReg
-      || previoReg.estado !== registro.estado
-      || previoReg.fechaVisita !== registro.fechaVisita
-      || previoReg.fechaPrevista !== registro.fechaPrevista
-      || !!lugarNuevo;
-
-    // Si solo cambió la nota, no pisar actualizadoPor del registro en la nube
-    if (cambioEstadoOFechas) {
-      datos[id] = registro;
-    } else if (datos[id]) {
-      // conservar autor/actualizadoPor previos
-      datos[id] = { ...datos[id], ...registro, autor: previoReg.autor || registro.autor, actualizadoPor: previoReg.actualizadoPor || previoReg.autor || '' };
-    } else {
-      datos[id] = registro;
-    }
-
-    if (notaTexto || (misNotas[id] && misNotas[id].texto)) {
-      misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: !puedeEscribirNube() };
-      guardarNotasLocal();
-    }
+    datos[id] = registro;
     guardarCacheLocal();
 
     if (puedeEscribirNube()) {
       if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
-      if (cambioEstadoOFechas) guardarRegistroEnNube(id, datos[id]);
-      if (notaTexto || (misNotas[id] && misNotas[id].texto !== undefined)) {
-        guardarNotaEnNube(id, notaTexto, notaVis).then(() => {
-          if (misNotas[id]) { delete misNotas[id].pendiente; guardarNotasLocal(); }
-        });
-      }
-      toast('Cambios guardados en la nube');
+      guardarRegistroEnNube(id, registro);
+      toast(hayNota ? 'Estado y nota guardados en la nube' : 'Cambios guardados en la nube');
     } else {
-      if (cambioEstadoOFechas) marcarPendienteRegistro(id);
+      marcarPendienteRegistro(id);
       if (lugarNuevo) marcarPendienteLugar(id);
-      if (notaTexto) {
-        misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: true };
-        guardarNotasLocal();
-      }
       guardarCacheLocal();
       toast('Guardado solo aquí · Pendiente de subir (inicia sesión y verifica el correo)');
     }
 
     refrescarTodo();
     actualizarMarker(id);
+    if (hayNota) cargarNotasDeLugar(id);
   }
 
   form.addEventListener('submit', (e) => { e.preventDefault(); guardar(); });
