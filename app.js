@@ -66,12 +66,23 @@
   }
 
   function puedeEscribirNube() {
-    return !!(db && nubePermitida && emailVerificado && esMiembro && miUid);
+    // Cualquier cuenta con correo verificado puede escribir en la nube (sin lista de miembros)
+    return !!(db && emailVerificado && miUid);
   }
 
-  /** Miembros verificados ven nombres de autor; el resto no. */
+  /** Solo admin ve el filtro y nombres de todos; el autor ve la suya en su pin. */
   function puedeVerAutores() {
-    return !!(emailVerificado && esMiembro && miUid);
+    return !!esAdmin;
+  }
+
+  function puedeVerAutorDe(l, i) {
+    if (esAdmin) return true;
+    if (!miUid) return false;
+    if (l && l.autorUid && l.autorUid === miUid) return true;
+    if (i && i.autorUid && i.autorUid === miUid) return true;
+    if (i && i.autor && miNombre && i.autor === miNombre) return true;
+    if (l && l.autor && miNombre && l.autor === miNombre) return true;
+    return false;
   }
 
   function esDuenoLugar(l) {
@@ -710,16 +721,7 @@
       return;
     }
 
-    if (!esMiembro) {
-      info.textContent = 'Sin acceso · ' + (user.email || '');
-      info.classList.remove('is-on');
-      if (btnLogin) btnLogin.hidden = true;
-      if (btnLogout) btnLogout.hidden = false;
-      if (btnVerify) btnVerify.hidden = true;
-      return;
-    }
-
-    info.textContent = miNombre + (user.email ? ' · ' + user.email : '');
+    info.textContent = (esAdmin ? 'Admin · ' : '') + miNombre + (user.email ? ' · ' + user.email : '');
     info.classList.add('is-on');
     if (btnLogin) btnLogin.hidden = true;
     if (btnLogout) btnLogout.hidden = false;
@@ -750,29 +752,23 @@
       actualizarUISesion(user);
       pintarFiltrosAutor();
       refrescarTodo();
-      toast('Verifica tu correo. Tus cambios quedan solo en este dispositivo.');
+      toast('Verifica tu correo. Hasta entonces tus cambios quedan solo en este dispositivo.');
       return;
     }
 
-    esMiembro = await comprobarMiembro(user);
+    // Admin opcional (documento admins/{uid} creado a mano en la consola)
     try {
       const adm = await db.collection('admins').doc(user.uid).get();
       esAdmin = adm.exists;
     } catch (_) { esAdmin = false; }
 
-    if (!esMiembro) {
-      actualizarUISesion(user);
-      pintarFiltrosAutor();
-      refrescarTodo();
-      toast('Tu correo no está autorizado. Pide acceso al administrador.');
-      return;
-    }
-
+    // Ya no se exige lista "miembros": cualquier correo verificado puede escribir
+    esMiembro = true;
     nubePermitida = true;
     actualizarUISesion(user);
     pintarFiltrosAutor();
     refrescarTodo();
-    toast('Sesión lista · puedes subir cambios a la nube');
+    toast(esAdmin ? 'Sesión de administrador lista' : 'Sesión lista · puedes guardar en la nube');
     await subirPendientes();
   }
 
@@ -959,8 +955,8 @@
       baseTxt = l.departamento ? `${t} en ${l.departamento}` : t;
     }
     if (l.personalizado) {
-      baseTxt = (puedeVerAutores() && autor) ? `Manual · ${autor}` : 'Pin manual';
-    } else if (puedeVerAutores() && autor) {
+      baseTxt = (puedeVerAutorDe(l, i) && autor) ? `Manual · ${autor}` : 'Pin manual';
+    } else if (puedeVerAutorDe(l, i) && autor) {
       baseTxt = `${baseTxt} · ${autor}`;
     }
     if (esPendienteId(l.id)) baseTxt += ' · Pendiente de subir';
@@ -1242,7 +1238,7 @@
 
     const meta = $('#p-meta');
     if (meta) {
-      if (puedeVerAutores()) {
+      if (puedeVerAutorDe(l, i)) {
         const creado = l.autor || i.autor || '—';
         const ultimo = i.actualizadoPor || i.autor || creado;
         meta.hidden = false;
@@ -1410,7 +1406,7 @@
         guardarNotasLocal();
       }
       guardarCacheLocal();
-      toast('Guardado solo aquí · Pendiente de subir (inicia sesión y pide acceso)');
+      toast('Guardado solo aquí · Pendiente de subir (inicia sesión y verifica el correo)');
     }
 
     refrescarTodo();

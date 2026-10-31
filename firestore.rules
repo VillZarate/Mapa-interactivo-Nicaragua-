@@ -10,56 +10,44 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
-    function emailLower() {
-      return request.auth.token.email.lower();
-    }
-
-    function isMember() {
-      return isVerified()
-        && exists(/databases/$(database)/documents/miembros/$(emailLower()));
-    }
-
     function isAdmin() {
       return isVerified()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Mapa: todos leen; cualquier cuenta verificada escribe lo suyo; admin todo
     match /lugares/{id} {
       allow read: if true;
-      allow create: if isMember()
+      allow create: if isVerified()
         && request.resource.data.autorUid == request.auth.uid;
-      allow update, delete: if isMember() && (
+      allow update, delete: if isVerified() && (
         isAdmin()
-        || (resource.data.autorUid is string
-            && resource.data.autorUid.size() > 0
-            && resource.data.autorUid == request.auth.uid)
+        || resource.data.autorUid == request.auth.uid
       );
     }
 
     match /registros/{id} {
       allow read: if true;
-      allow create: if isMember()
+      allow create: if isVerified()
         && request.resource.data.autorUid == request.auth.uid;
-      allow update, delete: if isMember() && (
+      allow update, delete: if isVerified() && (
         isAdmin()
-        || (resource.data.autorUid is string
-            && resource.data.autorUid.size() > 0
-            && resource.data.autorUid == request.auth.uid)
+        || resource.data.autorUid == request.auth.uid
+        // migrados sin dueño: solo admin
+        || (isAdmin() && (!(resource.data.autorUid is string) || resource.data.autorUid.size() == 0))
       );
     }
 
-    // Notas: públicas legibles por todos; privadas solo autor o admin
     match /notas/{id} {
       allow read: if resource.data.visibilidad == 'publica'
         || (isSignedIn() && resource.data.autorUid == request.auth.uid)
         || isAdmin();
-      allow create: if isMember()
+      allow create: if isVerified()
         && request.resource.data.autorUid == request.auth.uid
         && request.resource.data.texto is string
         && request.resource.data.texto.size() <= 2000;
-      allow update, delete: if isMember() && (
-        isAdmin()
-        || resource.data.autorUid == request.auth.uid
+      allow update, delete: if isVerified() && (
+        isAdmin() || resource.data.autorUid == request.auth.uid
       );
     }
 
@@ -68,14 +56,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /miembros/{email} {
-      allow read: if isSignedIn() && emailLower() == email;
-      allow write: if false;
-    }
-
+    // Solo lectura del propio doc de admin (se crea a mano en la consola)
     match /admins/{uid} {
       allow read: if isVerified() && request.auth.uid == uid;
       allow write: if false;
+    }
+
+    // Colección miembros ya no se usa para permisos (se deja bloqueada)
+    match /miembros/{email} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

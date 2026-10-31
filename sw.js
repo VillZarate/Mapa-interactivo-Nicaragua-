@@ -4,7 +4,7 @@
    Los tiles del mapa requieren internet (se intentan en red).
 */
 
-const CACHE = 'mapa-ni-v6-admin';
+const CACHE = 'mapa-ni-v7-abierto';
 const PRECACHE = [
   './',
   './index.html',
