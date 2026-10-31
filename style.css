@@ -873,3 +873,67 @@ body.adding .leaflet-container { cursor: crosshair; }
   .topbar-auth { max-width: none; }
   .stats { display: none; }
 }
+
+/* ---------- Notas ---------- */
+.notas-block { display: flex; flex-direction: column; gap: 12px; }
+.field-vis select { max-width: 100%; }
+.notas-otras-tit {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.notas-publicas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.nota-item {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 13px;
+}
+.nota-item strong { display: block; margin-bottom: 4px; color: var(--ink); }
+.nota-item p { margin: 0; white-space: pre-wrap; color: var(--muted); }
+.nota-item em { font-size: 11px; color: var(--muted); font-weight: 500; }
+.notas-vacio { margin: 0; font-size: 13px; color: var(--muted); }
+#filtros-autor[hidden] { display: none !important; }
+
+/* ---------- Admin autores ---------- */
+.p-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.p-meta strong { color: var(--ink); font-weight: 600; }
+.admin-autores {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafb;
+}
+.admin-tit {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.admin-autor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.admin-autor-row span { flex: 1 1 100%; font-weight: 600; }
+.admin-autor-row .btn { flex: 1; font-size: 12px; padding: 6px 8px; }

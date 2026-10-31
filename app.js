@@ -39,6 +39,12 @@
   let unsubRegistros = null;
   let unsubLugares = null;
   let unsubOcultos = null;
+  let esAdmin = false;
+  /** notas públicas por lugarId (solo lectura/display) */
+  let notasPublicasPorLugar = {};
+  /** mi nota por lugarId: { texto, visibilidad, pendiente? } */
+  let misNotas = {};
+  const NOTAS_KEY = 'mapa-nicaragua:notas';
 
   try {
     if (typeof firebase !== 'undefined') {
@@ -63,6 +69,32 @@
     return !!(db && nubePermitida && emailVerificado && esMiembro && miUid);
   }
 
+  /** Miembros verificados ven nombres de autor; el resto no. */
+  function puedeVerAutores() {
+    return !!(emailVerificado && esMiembro && miUid);
+  }
+
+  function esDuenoLugar(l) {
+    if (!l || !miUid) return false;
+    return !!(l.autorUid && l.autorUid === miUid);
+  }
+
+  function esDuenoRegistro(id) {
+    const i = info(id);
+    // datos locales no siempre traen autorUid; usar autorNombre ≈ miNombre
+    if (i && i.autorUid && miUid && i.autorUid === miUid) return true;
+    if (i && i.autor && miNombre && i.autor === miNombre) return true;
+    return false;
+  }
+
+  function puedeEditarPinManual(l) {
+    return esAdmin || esDuenoLugar(l);
+  }
+
+  function puedeRestablecerRegistro(id) {
+    return esAdmin || esDuenoRegistro(id);
+  }
+
   function esPendienteId(id) {
     if (datos[id] && datos[id].pendiente) return true;
     const c = custom.find((x) => x.id === id);
@@ -77,6 +109,107 @@
   function marcarPendienteLugar(id) {
     const idx = custom.findIndex((c) => c.id === id);
     if (idx >= 0) custom[idx] = { ...custom[idx], pendiente: true };
+  }
+
+  function cargarNotasLocal() {
+    try {
+      const raw = localStorage.getItem(NOTAS_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      misNotas = p && typeof p === 'object' ? p : {};
+    } catch (_) { misNotas = {}; }
+  }
+
+  function guardarNotasLocal() {
+    try {
+      localStorage.setItem(NOTAS_KEY, JSON.stringify(misNotas));
+    } catch (err) { console.warn(err); }
+  }
+
+  function idNota(lugarId, uid) {
+    return String(lugarId) + '__' + String(uid || 'anon');
+  }
+
+  function guardarNotaEnNube(lugarId, texto, visibilidad) {
+    if (!puedeEscribirNube() || !lugarId || !miUid) return Promise.resolve();
+    const nid = idNota(lugarId, miUid);
+    marcarEscritura(nid);
+    const payload = {
+      lugarId,
+      autorUid: miUid,
+      autorNombre: miNombre || 'Anónimo',
+      texto: String(texto || '').slice(0, 2000),
+      visibilidad: visibilidad === 'publica' ? 'publica' : 'privada',
+      actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    return db.collection('notas').doc(nid).set(payload, { merge: true })
+      .catch((err) => console.warn('Error guardando nota', err));
+  }
+
+  function cargarNotasDeLugar(lugarId) {
+    const caja = document.getElementById('notas-publicas');
+    const miTexto = document.getElementById('mi-nota-texto');
+    const miVis = document.getElementById('mi-nota-vis');
+    if (!lugarId) return;
+
+    // Mi nota (local primero)
+    const local = misNotas[lugarId];
+    if (miTexto) miTexto.value = local && local.texto ? local.texto : '';
+    if (miVis) miVis.value = local && local.visibilidad === 'publica' ? 'publica' : 'privada';
+
+    if (!db) {
+      if (caja) caja.innerHTML = '<p class="notas-vacio">Sin conexión a la nube.</p>';
+      return;
+    }
+
+    // Mis nota en nube si hay sesión
+    if (miUid) {
+      db.collection('notas').doc(idNota(lugarId, miUid)).get().then((snap) => {
+        if (snap.exists) {
+          const d = snap.data() || {};
+          if (miTexto && !(local && local.pendiente)) miTexto.value = d.texto || '';
+          if (miVis && !(local && local.pendiente)) miVis.value = d.visibilidad === 'publica' ? 'publica' : 'privada';
+          if (!(local && local.pendiente)) {
+            misNotas[lugarId] = { texto: d.texto || '', visibilidad: d.visibilidad === 'publica' ? 'publica' : 'privada' };
+            guardarNotasLocal();
+          }
+        }
+      }).catch(() => {});
+    }
+
+    // Públicas (o todas si admin)
+    let q = db.collection('notas').where('lugarId', '==', lugarId);
+    if (!esAdmin) {
+      q = q.where('visibilidad', '==', 'publica');
+    }
+    q.get().then((snap) => {
+      const items = [];
+      snap.forEach((doc) => {
+        const d = doc.data() || {};
+        if (!esAdmin && d.visibilidad !== 'publica') return;
+        // No listar mi propia nota en "otras"
+        if (d.autorUid && miUid && d.autorUid === miUid) return;
+        items.push({
+          autorNombre: d.autorNombre || 'Alguien',
+          texto: d.texto || '',
+          visibilidad: d.visibilidad || 'publica',
+        });
+      });
+      notasPublicasPorLugar[lugarId] = items;
+      if (!caja) return;
+      if (!items.length) {
+        caja.innerHTML = '<p class="notas-vacio">No hay notas públicas todavía.</p>';
+        return;
+      }
+      caja.innerHTML = items.map((n) =>
+        `<div class="nota-item"><strong>${esc(puedeVerAutores() ? n.autorNombre : 'Visitante')}</strong>` +
+        (esAdmin && n.visibilidad === 'privada' ? ' <em>(privada)</em>' : '') +
+        `<p>${esc(n.texto)}</p></div>`
+      ).join('');
+    }).catch((err) => {
+      console.warn('Error cargando notas', err);
+      if (caja) caja.innerHTML = '<p class="notas-vacio">No se pudieron cargar las notas.</p>';
+    });
   }
 
   function errorAuthEs(code, fallback) {
@@ -172,7 +305,7 @@
   let marcadorTemp = null;
   let anadiendo = false;
 
-  const vacio = () => ({ estado: 'sin_marcar', fechaVisita: '', fechaPrevista: '', notas: '', autor: '', actualizadoPor: '' });
+  const vacio = () => ({ estado: 'sin_marcar', fechaVisita: '', fechaPrevista: '', autor: '', actualizadoPor: '' });
   const info = (id) => ({ ...vacio(), ...(datos[id] || {}) });
   const porId = (id) => lugares.find((l) => l.id === id);
 
@@ -219,6 +352,7 @@
     } catch (err) {
       console.warn('No se pudieron leer los datos guardados:', err);
     }
+    cargarNotasLocal();
   }
 
   function guardarCacheLocal() {
@@ -246,7 +380,6 @@
       estado: ESTADOS[d.estado] ? d.estado : 'sin_marcar',
       fechaVisita: d.fechaVisita || '',
       fechaPrevista: d.fechaPrevista || '',
-      notas: d.notas || '',
       autor: d.autorNombre || d.autor || '',
       actualizadoPor: d.actualizadoPor || d.autorNombre || '',
     };
@@ -277,7 +410,6 @@
       estado: registro.estado || 'sin_marcar',
       fechaVisita: registro.fechaVisita || '',
       fechaPrevista: registro.fechaPrevista || '',
-      notas: registro.notas || '',
       actualizadoPor: registro.actualizadoPor || miNombre || 'Anónimo',
       actualizado: firebase.firestore.FieldValue.serverTimestamp(),
     };
@@ -446,12 +578,12 @@
     const set = new Set();
     snapshot.docs.forEach((doc) => {
       const d = doc.data();
-      // id del doc o campo nombre
       if (d && d.nombre) set.add(d.nombre);
       else set.add(doc.id);
     });
     autoresOcultos = set;
     pintarFiltrosAutor();
+    actualizarPanelAdmin();
   }
 
   function avisoPermisoFirestore(err) {
@@ -511,7 +643,6 @@
   async function subirPendientes() {
     if (!puedeEscribirNube()) return;
     let n = 0;
-    // Registros pendientes
     Object.keys(datos).forEach((id) => {
       if (datos[id] && datos[id].pendiente) {
         const { pendiente, ...resto } = datos[id];
@@ -520,7 +651,6 @@
         n++;
       }
     });
-    // Pines manuales pendientes
     custom.forEach((c, idx) => {
       if (c.pendiente) {
         const limpio = { ...c };
@@ -535,6 +665,16 @@
         n++;
       }
     });
+    // Notas pendientes
+    Object.keys(misNotas).forEach((lugarId) => {
+      const nta = misNotas[lugarId];
+      if (nta && nta.pendiente) {
+        guardarNotaEnNube(lugarId, nta.texto || '', nta.visibilidad || 'privada');
+        delete nta.pendiente;
+        n++;
+      }
+    });
+    guardarNotasLocal();
     if (n) {
       guardarCacheLocal();
       reconstruir();
@@ -590,11 +730,14 @@
     nubePermitida = false;
     esMiembro = false;
     emailVerificado = false;
+    esAdmin = false;
 
     if (!user) {
       miUid = '';
       miNombre = '';
       actualizarUISesion(null);
+      pintarFiltrosAutor();
+      refrescarTodo();
       return;
     }
 
@@ -605,19 +748,30 @@
 
     if (!user.emailVerified) {
       actualizarUISesion(user);
+      pintarFiltrosAutor();
+      refrescarTodo();
       toast('Verifica tu correo. Tus cambios quedan solo en este dispositivo.');
       return;
     }
 
     esMiembro = await comprobarMiembro(user);
+    try {
+      const adm = await db.collection('admins').doc(user.uid).get();
+      esAdmin = adm.exists;
+    } catch (_) { esAdmin = false; }
+
     if (!esMiembro) {
       actualizarUISesion(user);
+      pintarFiltrosAutor();
+      refrescarTodo();
       toast('Tu correo no está autorizado. Pide acceso al administrador.');
       return;
     }
 
     nubePermitida = true;
     actualizarUISesion(user);
+    pintarFiltrosAutor();
+    refrescarTodo();
     toast('Sesión lista · puedes subir cambios a la nube');
     await subirPendientes();
   }
@@ -804,8 +958,11 @@
       const t = TIPOS[l.tipo] || 'Lugar';
       baseTxt = l.departamento ? `${t} en ${l.departamento}` : t;
     }
-    if (l.personalizado) baseTxt = autor ? `Manual · ${autor}` : 'Pin manual';
-    else if (autor) baseTxt = `${baseTxt} · ${autor}`;
+    if (l.personalizado) {
+      baseTxt = (puedeVerAutores() && autor) ? `Manual · ${autor}` : 'Pin manual';
+    } else if (puedeVerAutores() && autor) {
+      baseTxt = `${baseTxt} · ${autor}`;
+    }
     if (esPendienteId(l.id)) baseTxt += ' · Pendiente de subir';
     return baseTxt;
   }
@@ -872,9 +1029,16 @@
   function pintarFiltrosAutor() {
     const el = $('#filtros-autor');
     if (!el) return;
+    if (!puedeVerAutores()) {
+      el.hidden = true;
+      el.innerHTML = '';
+      filtroAutor = 'todos';
+      return;
+    }
+    el.hidden = false;
     const lista = autoresPresentes();
     if (!lista.length) {
-      el.innerHTML = '<p class="hint-autor">Escribe tu nombre arriba y guarda un pin para poder filtrar por autor.</p>';
+      el.innerHTML = '<p class="hint-autor">Guarda un pin con tu cuenta para filtrar por autor.</p>';
       return;
     }
     const chips = [
@@ -884,6 +1048,125 @@
       ),
     ];
     el.innerHTML = chips.join('');
+    actualizarPanelAdmin();
+  }
+
+  function actualizarPanelAdmin() {
+    const box = $('#admin-autores');
+    if (!box) return;
+    if (!esAdmin) {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    const lista = $('#admin-autores-lista');
+    if (!lista) return;
+    const visibles = autoresPresentes();
+    const ocultos = [...autoresOcultos].sort((a, b) => a.localeCompare(b, 'es'));
+    let html = '';
+    if (!visibles.length && !ocultos.length) {
+      html = '<p class="hint-autor">No hay autores todavía.</p>';
+    }
+    visibles.forEach((a) => {
+      html += `<div class="admin-autor-row" data-autor="${esc(a)}">
+        <span>${esc(a)}</span>
+        <button type="button" class="btn btn--soft btn-admin-ocultar" data-autor="${esc(a)}">Ocultar del filtro</button>
+        <button type="button" class="btn btn--quiet btn-admin-borrar" data-autor="${esc(a)}">Eliminar contenido</button>
+      </div>`;
+    });
+    if (ocultos.length) {
+      html += '<p class="hint-autor" style="margin-top:8px">Ocultos del filtro</p>';
+      ocultos.forEach((a) => {
+        html += `<div class="admin-autor-row" data-autor="${esc(a)}">
+          <span>${esc(a)} <em>(oculto)</em></span>
+          <button type="button" class="btn btn--soft btn-admin-mostrar" data-autor="${esc(a)}">Volver a mostrar</button>
+        </div>`;
+      });
+    }
+    lista.innerHTML = html;
+  }
+
+  async function adminOcultarAutor(nombre) {
+    if (!esAdmin || !db || !nombre) return;
+    try {
+      await db.collection('ocultos').doc(nombre).set({
+        nombre,
+        actualizado: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      toast('Autor ocultado del filtro');
+    } catch (err) {
+      console.warn(err);
+      toast('No se pudo ocultar el autor');
+    }
+  }
+
+  async function adminMostrarAutor(nombre) {
+    if (!esAdmin || !db || !nombre) return;
+    try {
+      await db.collection('ocultos').doc(nombre).delete();
+      toast('Autor visible de nuevo en el filtro');
+    } catch (err) {
+      console.warn(err);
+      toast('No se pudo mostrar el autor');
+    }
+  }
+
+  async function adminBorrarContenidoAutor(nombre) {
+    if (!esAdmin || !db || !nombre) return;
+    const conf = prompt(`Para eliminar TODO el contenido de "${nombre}", escribe el nombre exacto:`);
+    if (conf !== nombre) {
+      toast('Confirmación incorrecta · no se borró nada');
+      return;
+    }
+    if (!confirm(`¿Seguro? Se borrarán pines y registros de "${nombre}".`)) return;
+    try {
+      let n = 0;
+      // Pines manuales de ese autor (por nombre)
+      const lugaresSnap = await db.collection('lugares').get();
+      const batch1 = db.batch();
+      lugaresSnap.forEach((doc) => {
+        const d = doc.data() || {};
+        if ((d.autorNombre || d.autor || '') === nombre) {
+          batch1.delete(doc.ref);
+          batch1.delete(db.collection('registros').doc(doc.id));
+          n++;
+        }
+      });
+      await batch1.commit();
+
+      // Registros base marcados por ese autor
+      const regSnap = await db.collection('registros').get();
+      let batch2 = db.batch();
+      let ops = 0;
+      for (const doc of regSnap.docs) {
+        const d = doc.data() || {};
+        if ((d.autorNombre || d.autor || d.actualizadoPor || '') === nombre) {
+          batch2.delete(doc.ref);
+          ops++;
+          n++;
+          if (ops >= 400) {
+            await batch2.commit();
+            batch2 = db.batch();
+            ops = 0;
+          }
+        }
+      }
+      if (ops) await batch2.commit();
+
+      // Local
+      custom = custom.filter((c) => (c.autor || c.autorNombre || '') !== nombre);
+      Object.keys(datos).forEach((id) => {
+        const d = datos[id];
+        if (d && (d.autor === nombre || d.actualizadoPor === nombre)) delete datos[id];
+      });
+      guardarCacheLocal();
+      reconstruir();
+      toast(`Contenido de "${nombre}" eliminado (${n} docs en nube)`);
+      actualizarPanelAdmin();
+    } catch (err) {
+      console.warn(err);
+      toast('Error al eliminar contenido del autor');
+    }
   }
 
   /* ---------- Panel de edición ---------- */
@@ -954,12 +1237,31 @@
     form.elements.estado.value = i.estado;
     form.elements.fechaVisita.value = i.fechaVisita;
     form.elements.fechaPrevista.value = i.fechaPrevista;
-    form.elements.notas.value = i.notas;
     resaltarFechas();
+    cargarNotasDeLugar(id);
+
+    const meta = $('#p-meta');
+    if (meta) {
+      if (puedeVerAutores()) {
+        const creado = l.autor || i.autor || '—';
+        const ultimo = i.actualizadoPor || i.autor || creado;
+        meta.hidden = false;
+        meta.innerHTML = `<span>Creado por <strong>${esc(creado)}</strong></span>` +
+          `<span>Última modificación por <strong>${esc(ultimo)}</strong></span>`;
+      } else {
+        meta.hidden = true;
+        meta.innerHTML = '';
+      }
+    }
 
     const btn = $('#btn-borrar');
-    btn.hidden = false;
-    btn.textContent = l.personalizado ? 'Eliminar lugar' : 'Restablecer';
+    if (l.personalizado) {
+      btn.hidden = !puedeEditarPinManual(l);
+      btn.textContent = 'Eliminar lugar';
+    } else {
+      btn.hidden = !puedeRestablecerRegistro(id);
+      btn.textContent = 'Restablecer';
+    }
 
     mostrarPanel();
     if (opts.revelar !== false) revelar(L.latLng(l.coordenadas));
@@ -1033,10 +1335,11 @@
       estado: ESTADOS[fd.get('estado')] ? fd.get('estado') : 'sin_marcar',
       fechaVisita: fd.get('fechaVisita') || '',
       fechaPrevista: fd.get('fechaPrevista') || '',
-      notas: String(fd.get('notas') || '').trim(),
       autor: (previo && previo.autor) ? previo.autor : nombreAutor,
       actualizadoPor: nombreAutor,
     };
+    const notaTexto = String((document.getElementById('mi-nota-texto') || {}).value || '').trim().slice(0, 2000);
+    const notaVis = ((document.getElementById('mi-nota-vis') || {}).value === 'publica') ? 'publica' : 'privada';
 
     let id = seleccionado;
     let lugarNuevo = null;
@@ -1073,17 +1376,39 @@
     }
 
     if (!id) return;
+
+    // Solo dueño o admin editan pines manuales ajenos
+    const lugarActual = porId(id);
+    if (lugarActual && lugarActual.personalizado && !modoNuevo && !puedeEditarPinManual(lugarActual)) {
+      toast('Solo el autor o un administrador pueden editar este pin');
+      return;
+    }
+
     datos[id] = registro;
+    // Nota propia (colección notas, no dentro de registros)
+    if (notaTexto || misNotas[id]) {
+      misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: !puedeEscribirNube() };
+      guardarNotasLocal();
+    }
     guardarCacheLocal();
 
     // Nube solo si verificado + miembro; si no, pendiente solo local
     if (puedeEscribirNube()) {
       if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
       guardarRegistroEnNube(id, registro);
+      if (notaTexto) {
+        guardarNotaEnNube(id, notaTexto, notaVis).then(() => {
+          if (misNotas[id]) { delete misNotas[id].pendiente; guardarNotasLocal(); }
+        });
+      }
       toast('Cambios guardados en la nube');
     } else {
       marcarPendienteRegistro(id);
       if (lugarNuevo) marcarPendienteLugar(id);
+      if (notaTexto) {
+        misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: true };
+        guardarNotasLocal();
+      }
       guardarCacheLocal();
       toast('Guardado solo aquí · Pendiente de subir (inicia sesión y pide acceso)');
     }
@@ -1100,6 +1425,10 @@
     if (!l) return;
 
     if (l.personalizado) {
+      if (!puedeEditarPinManual(l)) {
+        toast('Solo el autor o un administrador pueden eliminar este pin');
+        return;
+      }
       if (!confirm(`¿Eliminar "${l.nombre}" del mapa?`)) return;
       const id = l.id;
       custom = custom.filter((c) => c.id !== id);
@@ -1112,7 +1441,11 @@
       cerrarPanel();
       toast('Lugar eliminado');
     } else {
-      if (!confirm(`¿Borrar estado, fechas y notas de "${l.nombre}"?`)) return;
+      if (!puedeRestablecerRegistro(l.id)) {
+        toast('Solo el autor o un administrador pueden restablecer este registro');
+        return;
+      }
+      if (!confirm(`¿Borrar estado y fechas de "${l.nombre}"?`)) return;
       const id = l.id;
       delete datos[id];
       borrarRegistroEnNube(id);
@@ -1359,6 +1692,18 @@
       filtroAutor = b.dataset.autor || 'todos';
       pintarFiltrosAutor();
       refrescarTodo();
+    });
+  }
+
+  const adminLista = $('#admin-autores-lista');
+  if (adminLista) {
+    adminLista.addEventListener('click', (e) => {
+      const ocultar = e.target.closest('.btn-admin-ocultar');
+      const mostrar = e.target.closest('.btn-admin-mostrar');
+      const borrar = e.target.closest('.btn-admin-borrar');
+      if (ocultar) adminOcultarAutor(ocultar.dataset.autor);
+      if (mostrar) adminMostrarAutor(mostrar.dataset.autor);
+      if (borrar) adminBorrarContenidoAutor(borrar.dataset.autor);
     });
   }
 
