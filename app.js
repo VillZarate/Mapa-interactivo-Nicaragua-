@@ -45,6 +45,8 @@
   /** mi nota por lugarId: { texto, visibilidad, pendiente? } */
   let misNotas = {};
   const NOTAS_KEY = 'mapa-nicaragua:notas';
+  /** evita que una consulta lenta de otro pin pise el panel actual */
+  let cargaNotasSeq = 0;
 
   try {
     if (typeof firebase !== 'undefined') {
@@ -163,42 +165,54 @@
     const miVis = document.getElementById('mi-nota-vis');
     if (!lugarId) return;
 
-    // Mi nota (local primero)
+    const seq = ++cargaNotasSeq;
+
+    // Limpiar panel al cambiar de lugar (evita ver nota del pin anterior)
+    if (miTexto) miTexto.value = '';
+    if (miVis) miVis.value = 'privada';
+    if (caja) caja.innerHTML = '<p class="notas-vacio">Cargando notas…</p>';
+
     const local = misNotas[lugarId];
-    if (miTexto) miTexto.value = local && local.texto ? local.texto : '';
-    if (miVis) miVis.value = local && local.visibilidad === 'publica' ? 'publica' : 'privada';
+    if (local) {
+      if (miTexto) miTexto.value = local.texto || '';
+      if (miVis) miVis.value = local.visibilidad === 'publica' ? 'publica' : 'privada';
+    }
 
     if (!db) {
       if (caja) caja.innerHTML = '<p class="notas-vacio">Sin conexión a la nube.</p>';
       return;
     }
 
-    // Mis nota en nube si hay sesión
     if (miUid) {
       db.collection('notas').doc(idNota(lugarId, miUid)).get().then((snap) => {
+        if (seq !== cargaNotasSeq || seleccionado !== lugarId) return;
         if (snap.exists) {
           const d = snap.data() || {};
-          if (miTexto && !(local && local.pendiente)) miTexto.value = d.texto || '';
-          if (miVis && !(local && local.pendiente)) miVis.value = d.visibilidad === 'publica' ? 'publica' : 'privada';
           if (!(local && local.pendiente)) {
-            misNotas[lugarId] = { texto: d.texto || '', visibilidad: d.visibilidad === 'publica' ? 'publica' : 'privada' };
+            if (miTexto) miTexto.value = d.texto || '';
+            if (miVis) miVis.value = d.visibilidad === 'publica' ? 'publica' : 'privada';
+            misNotas[lugarId] = {
+              texto: d.texto || '',
+              visibilidad: d.visibilidad === 'publica' ? 'publica' : 'privada',
+            };
             guardarNotasLocal();
           }
         }
       }).catch(() => {});
     }
 
-    // Públicas (o todas si admin)
     let q = db.collection('notas').where('lugarId', '==', lugarId);
     if (!esAdmin) {
       q = q.where('visibilidad', '==', 'publica');
     }
     q.get().then((snap) => {
+      if (seq !== cargaNotasSeq || seleccionado !== lugarId) return;
       const items = [];
       snap.forEach((doc) => {
         const d = doc.data() || {};
+        // Solo notas de ESTE lugar (por si acaso)
+        if (d.lugarId && d.lugarId !== lugarId) return;
         if (!esAdmin && d.visibilidad !== 'publica') return;
-        // No listar mi propia nota en "otras"
         if (d.autorUid && miUid && d.autorUid === miUid) return;
         items.push({
           autorNombre: d.autorNombre || 'Alguien',
@@ -212,12 +226,14 @@
         caja.innerHTML = '<p class="notas-vacio">No hay notas públicas todavía.</p>';
         return;
       }
+      // Notas públicas: siempre muestran el nombre del autor
       caja.innerHTML = items.map((n) =>
-        `<div class="nota-item"><strong>${esc(puedeVerAutores() ? n.autorNombre : 'Visitante')}</strong>` +
+        `<div class="nota-item"><strong>${esc(n.autorNombre)}</strong>` +
         (esAdmin && n.visibilidad === 'privada' ? ' <em>(privada)</em>' : '') +
         `<p>${esc(n.texto)}</p></div>`
       ).join('');
     }).catch((err) => {
+      if (seq !== cargaNotasSeq) return;
       console.warn('Error cargando notas', err);
       if (caja) caja.innerHTML = '<p class="notas-vacio">No se pudieron cargar las notas.</p>';
     });
@@ -1240,10 +1256,14 @@
     if (meta) {
       if (puedeVerAutorDe(l, i)) {
         const creado = l.autor || i.autor || '—';
-        const ultimo = i.actualizadoPor || i.autor || creado;
+        const ultimo = i.actualizadoPor || '';
         meta.hidden = false;
-        meta.innerHTML = `<span>Creado por <strong>${esc(creado)}</strong></span>` +
-          `<span>Última modificación por <strong>${esc(ultimo)}</strong></span>`;
+        let html = `<span>Creado por <strong>${esc(creado)}</strong></span>`;
+        // Solo mostrar "última modificación" si hay un nombre y no es vacío
+        if (ultimo) {
+          html += `<span>Última modificación por <strong>${esc(ultimo)}</strong></span>`;
+        }
+        meta.innerHTML = html;
       } else {
         meta.hidden = true;
         meta.innerHTML = '';
@@ -1380,26 +1400,40 @@
       return;
     }
 
-    datos[id] = registro;
-    // Nota propia (colección notas, no dentro de registros)
-    if (notaTexto || misNotas[id]) {
+    const previoReg = info(id);
+    const cambioEstadoOFechas = !previoReg
+      || previoReg.estado !== registro.estado
+      || previoReg.fechaVisita !== registro.fechaVisita
+      || previoReg.fechaPrevista !== registro.fechaPrevista
+      || !!lugarNuevo;
+
+    // Si solo cambió la nota, no pisar actualizadoPor del registro en la nube
+    if (cambioEstadoOFechas) {
+      datos[id] = registro;
+    } else if (datos[id]) {
+      // conservar autor/actualizadoPor previos
+      datos[id] = { ...datos[id], ...registro, autor: previoReg.autor || registro.autor, actualizadoPor: previoReg.actualizadoPor || previoReg.autor || '' };
+    } else {
+      datos[id] = registro;
+    }
+
+    if (notaTexto || (misNotas[id] && misNotas[id].texto)) {
       misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: !puedeEscribirNube() };
       guardarNotasLocal();
     }
     guardarCacheLocal();
 
-    // Nube solo si verificado + miembro; si no, pendiente solo local
     if (puedeEscribirNube()) {
       if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
-      guardarRegistroEnNube(id, registro);
-      if (notaTexto) {
+      if (cambioEstadoOFechas) guardarRegistroEnNube(id, datos[id]);
+      if (notaTexto || (misNotas[id] && misNotas[id].texto !== undefined)) {
         guardarNotaEnNube(id, notaTexto, notaVis).then(() => {
           if (misNotas[id]) { delete misNotas[id].pendiente; guardarNotasLocal(); }
         });
       }
       toast('Cambios guardados en la nube');
     } else {
-      marcarPendienteRegistro(id);
+      if (cambioEstadoOFechas) marcarPendienteRegistro(id);
       if (lugarNuevo) marcarPendienteLugar(id);
       if (notaTexto) {
         misNotas[id] = { texto: notaTexto, visibilidad: notaVis, pendiente: true };
