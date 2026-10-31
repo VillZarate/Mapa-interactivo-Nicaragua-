@@ -26,15 +26,16 @@
   };
 
   let db = null;
-  let syncListo = false;
+  let syncListo = false;       // escuchas de lectura activas
+  let nubePermitida = false;   // puede escribir (verificado + miembro)
+  let esMiembro = false;
+  let emailVerificado = false;
   /** ids que estamos escribiendo nosotros (evita eco del onSnapshot) */
   const escribiendoIds = new Set();
   /** autores ocultos del filtro (colección ocultos) */
   let autoresOcultos = new Set();
   let miUid = '';
   let miNombre = '';
-  /** true solo con sesión y email verificado */
-  let nubePermitida = false;
   let unsubRegistros = null;
   let unsubLugares = null;
   let unsubOcultos = null;
@@ -59,7 +60,23 @@
   }
 
   function puedeEscribirNube() {
-    return !!(db && syncListo && nubePermitida);
+    return !!(db && nubePermitida && emailVerificado && esMiembro && miUid);
+  }
+
+  function esPendienteId(id) {
+    if (datos[id] && datos[id].pendiente) return true;
+    const c = custom.find((x) => x.id === id);
+    return !!(c && c.pendiente);
+  }
+
+  function marcarPendienteRegistro(id) {
+    if (!datos[id]) return;
+    datos[id] = { ...datos[id], pendiente: true };
+  }
+
+  function marcarPendienteLugar(id) {
+    const idx = custom.findIndex((c) => c.id === id);
+    if (idx >= 0) custom[idx] = { ...custom[idx], pendiente: true };
   }
 
   function errorAuthEs(code, fallback) {
@@ -328,36 +345,46 @@
 
   function aplicarSnapshotRegistros(snapshot, esPrimera) {
     let huboCambioAjeno = false;
-    snapshot.docChanges().forEach((change) => {
-      const id = change.doc.id;
-      if (escribiendoIds.has(id) && change.type === 'modified') return;
 
-      if (change.type === 'removed') {
-        if (datos[id]) {
-          delete datos[id];
-          huboCambioAjeno = true;
-        }
-        return;
-      }
-
-      const reg = registroDesdeDoc(id, change.doc.data());
-      if (!reg) return;
-      const prev = datos[id];
-      if (!prev || JSON.stringify(prev) !== JSON.stringify(reg)) {
-        datos[id] = reg;
-        huboCambioAjeno = true;
-      }
-    });
-
-    // Primera carga completa: reconstruir mapa de datos desde todos los docs
     if (esPrimera) {
+      // Fusionar: no borrar pendientes locales; la nube no pisa lo pendiente
+      const pendientes = {};
+      Object.keys(datos).forEach((id) => {
+        if (datos[id] && datos[id].pendiente) pendientes[id] = datos[id];
+      });
       const nuevo = {};
       snapshot.docs.forEach((doc) => {
         const reg = registroDesdeDoc(doc.id, doc.data());
         if (reg) nuevo[doc.id] = reg;
       });
+      Object.keys(pendientes).forEach((id) => {
+        nuevo[id] = pendientes[id];
+      });
       datos = nuevo;
       huboCambioAjeno = true;
+    } else {
+      snapshot.docChanges().forEach((change) => {
+        const id = change.doc.id;
+        if (escribiendoIds.has(id) && change.type === 'modified') return;
+        // No tocar ni borrar lo pendiente local
+        if (datos[id] && datos[id].pendiente) return;
+
+        if (change.type === 'removed') {
+          if (datos[id]) {
+            delete datos[id];
+            huboCambioAjeno = true;
+          }
+          return;
+        }
+
+        const reg = registroDesdeDoc(id, change.doc.data());
+        if (!reg) return;
+        const prev = datos[id];
+        if (!prev || JSON.stringify(prev) !== JSON.stringify(reg)) {
+          datos[id] = reg;
+          huboCambioAjeno = true;
+        }
+      });
     }
 
     if (huboCambioAjeno) {
@@ -376,8 +403,8 @@
         const l = lugarDesdeDoc(doc.id, doc.data());
         if (l) lista.push(l);
       });
-      // Fusionar con custom local que aún no esté en nube (caché)
       const idsNube = new Set(lista.map((l) => l.id));
+      // Conservar pines locales pendientes (u otros custom que aún no están en la nube)
       custom.forEach((c) => {
         if (!idsNube.has(c.id)) lista.push(c);
       });
@@ -387,10 +414,12 @@
       snapshot.docChanges().forEach((change) => {
         const id = change.doc.id;
         if (escribiendoIds.has(id) && change.type === 'modified') return;
+        const local = custom.find((c) => c.id === id);
+        if (local && local.pendiente) return;
 
         if (change.type === 'removed') {
           const antes = custom.length;
-          custom = custom.filter((c) => c.id !== id);
+          custom = custom.filter((c) => c.id !== id || c.pendiente);
           if (custom.length !== antes) huboCambioAjeno = true;
           return;
         }
@@ -398,8 +427,10 @@
         const l = lugarDesdeDoc(id, change.doc.data());
         if (!l) return;
         const idx = custom.findIndex((c) => c.id === id);
-        if (idx >= 0) custom[idx] = l;
-        else custom.push(l);
+        if (idx >= 0) {
+          if (custom[idx].pendiente) return;
+          custom[idx] = l;
+        } else custom.push(l);
         huboCambioAjeno = true;
       });
     }
@@ -423,27 +454,20 @@
     pintarFiltrosAutor();
   }
 
-  function detenerEscuchaNube() {
-    if (unsubRegistros) { unsubRegistros(); unsubRegistros = null; }
-    if (unsubLugares) { unsubLugares(); unsubLugares = null; }
-    if (unsubOcultos) { unsubOcultos(); unsubOcultos = null; }
-    syncListo = false;
-    nubePermitida = false;
+  function avisoPermisoFirestore(err) {
+    const code = err && err.code ? err.code : '';
+    if (code === 'permission-denied' || /permission|insufficient/i.test(String(err && err.message))) {
+      toast('Tu correo no está autorizado. Pide acceso al administrador.');
+    } else {
+      console.warn('Error Firestore:', err);
+    }
   }
 
-  function conectarEscuchaNube() {
+  /** Lectura pública: siempre escucha la nube (aunque no haya sesión). */
+  function conectarLecturaNube() {
     if (!db || syncListo) return;
     let primeraRegistros = true;
     let primeraLugares = true;
-
-    function avisoPermisoFirestore(err) {
-      const code = err && err.code ? err.code : '';
-      if (code === 'permission-denied' || /permission|insufficient/i.test(String(err && err.message))) {
-        toast('Tu correo no está autorizado. Pide acceso al administrador.');
-      } else {
-        console.warn('Error Firestore:', err);
-      }
-    }
 
     unsubRegistros = db.collection('registros').onSnapshot((snap) => {
       aplicarSnapshotRegistros(snap, primeraRegistros);
@@ -469,8 +493,53 @@
     });
 
     syncListo = true;
-    nubePermitida = true;
-    toast('Conectado a la nube');
+  }
+
+  async function comprobarMiembro(user) {
+    if (!db || !user || !user.email) return false;
+    try {
+      const id = String(user.email).toLowerCase().trim();
+      const snap = await db.collection('miembros').doc(id).get();
+      return snap.exists;
+    } catch (err) {
+      console.warn('Error comprobando miembro:', err);
+      avisoPermisoFirestore(err);
+      return false;
+    }
+  }
+
+  async function subirPendientes() {
+    if (!puedeEscribirNube()) return;
+    let n = 0;
+    // Registros pendientes
+    Object.keys(datos).forEach((id) => {
+      if (datos[id] && datos[id].pendiente) {
+        const { pendiente, ...resto } = datos[id];
+        datos[id] = resto;
+        guardarRegistroEnNube(id, resto);
+        n++;
+      }
+    });
+    // Pines manuales pendientes
+    custom.forEach((c, idx) => {
+      if (c.pendiente) {
+        const limpio = { ...c };
+        delete limpio.pendiente;
+        custom[idx] = limpio;
+        guardarLugarManualEnNube(limpio);
+        if (datos[c.id]) {
+          const { pendiente, ...resto } = datos[c.id];
+          datos[c.id] = resto;
+          guardarRegistroEnNube(c.id, resto);
+        }
+        n++;
+      }
+    });
+    if (n) {
+      guardarCacheLocal();
+      reconstruir();
+      toast('Cambios pendientes subidos a la nube');
+    }
   }
 
   function actualizarUISesion(user) {
@@ -481,16 +550,19 @@
     if (!info) return;
 
     if (!user) {
-      info.textContent = 'Sin sesión · solo datos locales';
+      info.textContent = 'Sin sesión · lectura pública · tus cambios solo aquí';
       info.classList.remove('is-on');
-      if (btnLogin) btnLogin.hidden = false;
+      if (btnLogin) {
+        btnLogin.hidden = false;
+        btnLogin.textContent = 'Iniciar sesión';
+      }
       if (btnLogout) btnLogout.hidden = true;
       if (btnVerify) btnVerify.hidden = true;
       return;
     }
 
     if (!user.emailVerified) {
-      info.textContent = 'Cuenta sin verificar · revisa tu correo (' + (user.email || '') + ')';
+      info.textContent = 'Sin verificar · ' + (user.email || '');
       info.classList.remove('is-on');
       if (btnLogin) btnLogin.hidden = true;
       if (btnLogout) btnLogout.hidden = false;
@@ -498,15 +570,26 @@
       return;
     }
 
-    info.textContent = 'Conectado: ' + miNombre + (user.email ? ' · ' + user.email : '');
+    if (!esMiembro) {
+      info.textContent = 'Sin acceso · ' + (user.email || '');
+      info.classList.remove('is-on');
+      if (btnLogin) btnLogin.hidden = true;
+      if (btnLogout) btnLogout.hidden = false;
+      if (btnVerify) btnVerify.hidden = true;
+      return;
+    }
+
+    info.textContent = miNombre + (user.email ? ' · ' + user.email : '');
     info.classList.add('is-on');
     if (btnLogin) btnLogin.hidden = true;
     if (btnLogout) btnLogout.hidden = false;
     if (btnVerify) btnVerify.hidden = true;
   }
 
-  function aplicarUsuario(user) {
-    detenerEscuchaNube();
+  async function aplicarUsuario(user) {
+    nubePermitida = false;
+    esMiembro = false;
+    emailVerificado = false;
 
     if (!user) {
       miUid = '';
@@ -517,15 +600,26 @@
 
     miUid = user.uid;
     miNombre = nombreDesdeUsuario(user);
+    emailVerificado = !!user.emailVerified;
     try { localStorage.setItem(LOCAL_UID_KEY, miUid); } catch (_) {}
-    actualizarUISesion(user);
 
     if (!user.emailVerified) {
-      toast('Verifica tu correo para sincronizar con la nube');
+      actualizarUISesion(user);
+      toast('Verifica tu correo. Tus cambios quedan solo en este dispositivo.');
       return;
     }
 
-    conectarEscuchaNube();
+    esMiembro = await comprobarMiembro(user);
+    if (!esMiembro) {
+      actualizarUISesion(user);
+      toast('Tu correo no está autorizado. Pide acceso al administrador.');
+      return;
+    }
+
+    nubePermitida = true;
+    actualizarUISesion(user);
+    toast('Sesión lista · puedes subir cambios a la nube');
+    await subirPendientes();
   }
 
   function iniciarAuth() {
@@ -533,7 +627,8 @@
       console.warn('Firebase SDK no cargado');
       return;
     }
-    // Sin login anónimo: solo correo/contraseña
+    // Lectura pública siempre; escritura solo miembro verificado
+    conectarLecturaNube();
     firebase.auth().onAuthStateChanged((user) => {
       aplicarUsuario(user);
     });
@@ -711,6 +806,7 @@
     }
     if (l.personalizado) baseTxt = autor ? `Manual · ${autor}` : 'Pin manual';
     else if (autor) baseTxt = `${baseTxt} · ${autor}`;
+    if (esPendienteId(l.id)) baseTxt += ' · Pendiente de subir';
     return baseTxt;
   }
 
@@ -736,7 +832,7 @@
       return `<li>
         <button type="button" class="item ${seleccionado === l.id ? 'is-active' : ''}" data-id="${esc(l.id)}">
           <span class="dot ${l.tipo === 'departamento' ? 'dot--dep' : ''}" style="--c:${ESTADOS[i.estado].color}"></span>
-          <span class="item-main"><strong>${esc(l.nombre)}</strong><small>${esc(subtitulo(l))}</small></span>
+          <span class="item-main"><strong>${esc(l.nombre)}</strong><small>${esc(subtitulo(l))}</small>${esPendienteId(l.id) ? '<span class="badge-pendiente">Pendiente de subir</span>' : ''}</span>
           <span class="item-date">${esc(fecha)}</span>
         </button>
       </li>`;
@@ -956,7 +1052,7 @@
         return;
       }
       if (!miNombre) {
-        toast('Escribe tu nombre arriba (barra lateral) para identificar tus pines');
+        toast('Inicia sesión para identificar tus pines en la nube');
       }
       lugarNuevo = {
         id: `custom-${Date.now().toString(36)}`,
@@ -980,13 +1076,16 @@
     datos[id] = registro;
     guardarCacheLocal();
 
-    // Firestore solo con sesión y correo verificado
+    // Nube solo si verificado + miembro; si no, pendiente solo local
     if (puedeEscribirNube()) {
       if (lugarNuevo) guardarLugarManualEnNube(lugarNuevo);
       guardarRegistroEnNube(id, registro);
       toast('Cambios guardados en la nube');
     } else {
-      toast('Guardado solo en este dispositivo · inicia sesión y verifica el correo para compartir');
+      marcarPendienteRegistro(id);
+      if (lugarNuevo) marcarPendienteLugar(id);
+      guardarCacheLocal();
+      toast('Guardado solo aquí · Pendiente de subir (inicia sesión y pide acceso)');
     }
 
     refrescarTodo();

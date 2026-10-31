@@ -44,6 +44,13 @@
         <span id="st-pct">0 % explorado</span>
       </div>
     </div>
+
+    <div class="topbar-auth" id="topbar-auth">
+      <span id="session-info" class="session-info session-info--top">Sin sesión</span>
+      <button type="button" id="btn-login" class="btn btn--auth">Iniciar sesión</button>
+      <button type="button" id="btn-verify" class="btn btn--auth" hidden>Ya verifiqué mi correo</button>
+      <button type="button" id="btn-logout" class="btn btn--auth btn--auth-out" hidden>Cerrar sesión</button>
+    </div>
   </header>
 
   <div class="layout">
@@ -65,12 +72,6 @@
         </div>
 
         <div class="session-box" id="session-box">
-          <div id="session-info" class="session-info">Sin sesión · solo datos locales</div>
-          <div class="session-actions">
-            <button type="button" id="btn-login" class="btn btn--soft">Iniciar sesión</button>
-            <button type="button" id="btn-verify" class="btn btn--soft" hidden>Ya verifiqué mi correo</button>
-            <button type="button" id="btn-logout" class="btn btn--soft" hidden>Cerrar sesión</button>
-          </div>
           <div id="filtros-autor" class="chips chips-autor" role="group" aria-label="Filtrar por autor"></div>
         </div>
       </div>

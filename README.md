@@ -2,71 +2,64 @@
 
 PWA con **Leaflet** + **Firebase** (Authentication y Firestore) para marcar lugares visitados, por visitar y con fecha.
 
-**Versión actual: 2.0 (Fase 2 — auth por correo)**
+**Versión: 2.1** — lectura pública del mapa, escritura solo para **miembros** con correo verificado.
 
 Sitio: https://villzarate.github.io/Mapa-interactivo-Nicaragua-/
 
----
-
-## Qué incluye
-
-- Mapa de Nicaragua con departamentos, ciudades y pines manuales
-- Estados: visitado, por visitar, con fecha, quiero volver
-- Filtros, búsqueda, clustering
-- **Cuenta con correo y contraseña** (Firebase Auth)
-- Sincronización en la nube solo con **correo verificado**
-- Sin sesión: datos solo en este dispositivo (`localStorage`)
-- PWA instalable (service worker `mapa-ni-v3-auth`)
+> Este proyecto se desarrolló con asistencia de inteligencia artificial (Grok / xAI y otras herramientas), bajo la dirección del autor del mapa.
 
 ---
 
-## Estructura de datos (Firestore)
+## Cómo funciona el acceso
 
-| Colección | Contenido |
-|-----------|-----------|
-| `lugares/{id}` | Pines añadidos a mano |
-| `registros/{id}` | Estado, fechas y notas (base o manual) |
-| `ocultos/{id}` | Autores ocultos del filtro (admin) |
-| `admins/{uid}` | Documento vacío = administrador |
+| Estado | Qué ve | Qué puede guardar en la nube |
+|--------|--------|------------------------------|
+| Sin sesión | Mapa público (pines de todos) | Solo en este dispositivo (pendiente) |
+| Sesión sin verificar correo | Mapa público | Solo local (pendiente) |
+| Verificado pero **no** está en `miembros` | Mapa público | Solo local + aviso de pedir acceso |
+| Verificado **y** miembro | Mapa público + sincroniza | Sí: sube pendientes y escribe en Firestore |
 
-Los lugares de `data/lugares.json` **no** se guardan en Firestore; solo su `registros/{id}` si alguien los marca.
+### Dar acceso a alguien (administrador)
 
----
+1. Firebase → Firestore → colección **`miembros`**
+2. Añade un documento cuyo **ID** sea el correo en **minúsculas** (ej. `ana@gmail.com`)
+3. Puede ir vacío o con un campo `nombre`
+4. La persona pulsa «Ya verifiqué mi correo» o vuelve a entrar
 
-## Cómo usar
-
-1. Abre el mapa e **Inicia sesión** o **Crea cuenta**.
-2. Verifica el correo (enlace que envía Firebase).
-3. Pulsa **«Ya verifiqué mi correo»** si ya confirmaste y aún no sincroniza.
-4. Con sesión verificada, los cambios se comparten en la nube.
+Opcional: documento `admins/{uid}` para poder editar/borrar datos migrados con `autorUid` vacío.
 
 ---
 
-## Archivos principales
+## Estructura Firestore
 
-- `index.html` — interfaz
-- `app.js` — lógica del mapa y Firebase
-- `style.css` — estilos
-- `sw.js` — PWA / caché offline
+| Colección | Uso |
+|-----------|-----|
+| `lugares/{id}` | Pines manuales |
+| `registros/{id}` | Estados y notas |
+| `miembros/{email}` | Quién puede escribir |
+| `admins/{uid}` | Administradores |
+| `ocultos/{id}` | Autores ocultos del filtro |
+
+---
+
+## Archivos
+
+- `index.html`, `app.js`, `style.css` — app
+- `sw.js` — PWA (caché `mapa-ni-v4-miembros`)
 - `data/lugares.json` — lugares base
-- `firestore.rules` — reglas de seguridad (publicar en la consola de Firebase)
+- `firestore.rules` — publicar en Firebase **después** de probar el código
 
 ---
 
-## Publicar cambios
+## Publicar
 
-1. Sube los archivos a GitHub (`main`).
-2. GitHub Pages sirve la raíz del repo.
-3. Tras cambiar `app.js` / `sw.js`, haz una recarga forzada o borra datos del sitio para evitar caché antigua.
-
----
-
-## Administrador
-
-En Firestore, crea a mano el documento `admins/{tuUid}` (vacío) para poder editar o borrar registros migrados con `autorUid` vacío.
+1. Sube los archivos a GitHub
+2. Recarga forzada / borra datos del sitio (nueva versión de SW)
+3. Publica reglas cuando el login y `miembros` estén bien
 
 ---
 
-## Licencia / uso
+## Notas
 
-Proyecto personal de viajes por Nicaragua. Map tiles: OpenStreetMap, Esri, OpenTopoMap según la capa elegida.
+- `autorUid` / `autorNombre` solo se escriben al **crear** un documento; las actualizaciones no los cambian.
+- Pines solo locales muestran la etiqueta **Pendiente de subir**.

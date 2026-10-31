@@ -821,3 +821,55 @@ body.adding .leaflet-container { cursor: crosshair; }
   padding: 8px 10px;
   border-radius: 8px;
 }
+
+/* ---------- Auth en barra superior (derecha) ---------- */
+.topbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  max-width: 42%;
+}
+.session-info--top {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.session-info--top.is-on { color: var(--lake); }
+.btn--auth {
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--lake);
+  color: #fff;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn--auth:hover { filter: brightness(1.06); }
+.btn--auth-out {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.badge-pendiente {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+@media (max-width: 860px) {
+  .session-info--top { display: none; }
+  .topbar-auth { max-width: none; }
+  .stats { display: none; }
+}
